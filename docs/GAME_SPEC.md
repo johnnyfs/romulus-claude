@@ -161,18 +161,19 @@ All sprites are 8x8 pixels (NES hardware limitation). This constraint actually e
 
 ### Music Tracks
 
-**Track 1: Main Theme (Title Screen)**
-- Tempo: 120 BPM
-- Channels: Pulse 1 (melody), Pulse 2 (harmony), Triangle (bass)
-- Mood: Mysterious, scientific, slightly unsettling
-- Length: 30 seconds loop
+**Track 1: Main Theme "Cellular Division"**
+- Tempo: 140 BPM (upbeat arcade pace)
+- Channels: Pulse 1 (melody), Pulse 2 (harmony), Triangle (bass), Noise (percussion)
+- Mood: Upbeat arcade energy with biological character - cheerful and engaging
+- Style: References Dr. Mario (medical theme), Pac-Man (arcade energy), Bubble Bobble (playful charm)
+- Length: 32-bar loop (A-B-A-B' structure)
+- Key: C Major (bright, accessible)
 
-**Track 2: Gameplay Music**
-- Tempo: 100 BPM
-- Channels: Pulse 1 (sparse melody), Triangle (ambient bass drone)
-- Mood: Minimal, tense, laboratory ambience
-- Length: 60 seconds loop
-- Note: Leaves Pulse 2 and Noise free for SFX
+**Track 2: Gameplay Music (same as Main Theme)**
+- Uses same "Cellular Division" theme during gameplay
+- Bouncy 8th note patterns with organic "burbling" feel
+- Memorable hook that won't grate after multiple plays
+- Note: SFX have priority and will briefly interrupt melody channels
 
 **Track 3: Level Clear**
 - Tempo: 140 BPM
