@@ -70,10 +70,17 @@ The game's central innovation is **emergent difficulty through success**. Unlike
 - Level 5+: +2 enemies per level, mix of all types, cap at 12
 
 ### Collision Detection
-- **Player vs Nutrient**: 8x8 pixel overlap detection
-- **Player vs Antibody**: 12x12 pixel hitbox (4-pixel tolerance for fairness)
+- **Player vs Nutrient**: 6x6 pixel overlap detection (center of 8x8 sprite)
+- **Player vs Antibody**: 6x6 pixel hitbox (2-pixel tolerance for fairness with 8x8 sprites)
 - **Player vs Boundary**: Hard stop at arena edges
 - **Antibody vs Boundary**: Reflection/reversal
+
+### Sprite Budget (Worst Case)
+- Player cells: 4 cells × 1 sprite = 4 sprites
+- Antibodies: 12 enemies × 1 sprite = 12 sprites
+- Nutrients: 10 particles × 1 sprite = 10 sprites
+- UI elements: ~4 sprites (score digits, cell counter)
+- **Total**: 30 sprites (well under 64 limit, no flicker)
 
 ### Level Progression
 1. **Level Start**: Reset to 1 cell, spawn antibodies in predetermined positions
@@ -101,23 +108,26 @@ The game's central innovation is **emergent difficulty through success**. Unlike
 
 ### Sprite Specifications
 
+**REVISED FOR NES HARDWARE CONSTRAINTS**
+All sprites are 8x8 pixels (NES hardware limitation). This constraint actually enhances the "microscopic" theme.
+
 **Player Cell**:
-- Size: 16x16 pixels
-- Colors: Cyan (#00C8FF), light cyan (#80E4FF), white (#FFFFFF) for highlights
-- Animation: 4-frame breathing cycle (8 frames per animation frame)
-- Details: Pseudopod-like protrusions, organic blob shape, darker nucleus in center
+- Size: 8x8 pixels (1 hardware sprite)
+- Colors: Cyan (#00C8FF), light cyan (#80E4FF), dark blue nucleus
+- Animation: 2-frame breathing cycle (subtle size pulsing)
+- Details: Circular blob with visible center nucleus, organic edges
 
 **Nutrient Particle**:
-- Size: 8x8 pixels
-- Colors: Green (#00FF00), lime (#80FF80)
+- Size: 8x8 pixels (1 hardware sprite)
+- Colors: 3 variants - Green, Yellow, Pink (each with light/dark shading)
 - Animation: 2-frame gentle pulse
-- Details: Circular, glowing appearance
+- Details: Simple circular design, high contrast for visibility
 
 **Antibody (4 variations)**:
-- Size: 16x16 pixels
-- Colors: Red (#FF0000), dark red (#C00000), black (#000000) outlines
+- Size: 8x8 pixels (1 hardware sprite each)
+- Colors: Red (#FF0000), dark red (#C00000), white highlights
 - Animation: 2-frame subtle movement
-- Details: Y-shaped antibody form (scientifically inspired), spiky edges
+- Details: Abstract menacing shape (spiky/angular), distinct silhouette per type
 
 **Arena Background**:
 - Tileset: 8x8 pixel tiles
