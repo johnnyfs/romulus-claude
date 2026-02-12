@@ -35,8 +35,8 @@ Creating a playable NES ROM of MITOSIS PANIC - an arcade-style biological surviv
   - [ ] Nutrient collection bloop SFX
   - [ ] Mitosis jingle SFX
   - [ ] Death sound SFX
-  - [ ] Background music (upbeat arcade, 140 BPM, Dr. Mario style)
-- **Note**: Audio direction is FINAL: Upbeat arcade energy with biological character (Game Designer decision)
+  - [ ] Background music (minimal ambient, ~100 BPM, Tetris Type B style)
+- **Note**: Audio direction is FINAL: Minimal ambient laboratory atmosphere for concentration (Game Designer decision)
 
 ### Chief Engineer
 - **Status**: Active
@@ -164,8 +164,8 @@ Creating a playable NES ROM of MITOSIS PANIC - an arcade-style biological surviv
 **Priority**: HIGH → CLOSED
 **Description**: Conflicting specifications for background music tone (minimal ambient vs upbeat arcade)
 **Affected**: Sound Designer, audio_specs.md
-**Resolution**: Game Designer directive is UPBEAT ARCADE (Dr. Mario style, 140 BPM). The assets/specs/audio_specs.md document is CORRECT.
-**Action**: COMPLETE - Sound Designer to follow audio_specs.md (140 BPM upbeat)
+**Resolution**: Game Designer directive is MINIMAL AMBIENT (Tetris Type B style, ~100 BPM, laboratory atmosphere). The corrected assets/specs/audio_specs.md document is authoritative.
+**Action**: COMPLETE - Sound Designer to follow corrected audio_specs.md (~100 BPM minimal ambient)
 
 ### Issue #2: Limited Agent Spawning
 **Priority**: MEDIUM  
