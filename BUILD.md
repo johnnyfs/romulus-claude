@@ -13,14 +13,21 @@
 ## Quick Start
 
 ```bash
+# Check build dependencies
+make check
+
 # Build the ROM
 make
 
 # Build and run in emulator
 make run
+# or: make test (alias)
 
 # Clean build artifacts
 make clean
+
+# Show build information
+make info
 ```
 
 ## Project Structure
@@ -95,10 +102,86 @@ You should see:
 - Check for assembly errors in build output
 - Try different emulator (FCEUX, Mesen, nestopia)
 
+## Build Targets
+
+The Makefile provides the following targets:
+
+- `make` or `make all` - Build the ROM (default)
+- `make run` - Build and launch in FCEUX emulator
+- `make test` - Alias for `make run`
+- `make clean` - Remove build artifacts (*.o, *.nes, *.map)
+- `make check` - Verify build dependencies are installed
+- `make info` - Display project information and available targets
+- `make help` - Alias for `make info`
+
+## Advanced Usage
+
+### Multiple Source Files
+
+The build system automatically detects all `.asm` files in the `src/` directory:
+
+```bash
+# All .asm files are assembled and linked automatically
+src/main.asm
+src/sprites.asm     # Future modular code
+src/entities.asm    # Future modular code
+```
+
+### Memory Map
+
+The `mitosis_panic.map` file shows memory allocation after linking:
+
+```bash
+# View memory map
+cat build/mitosis_panic.map
+```
+
+This is useful for:
+- Debugging memory layout issues
+- Verifying segment placement
+- Optimizing code size
+
+### Debug Builds
+
+Debug symbols are enabled by default (`-g` flag). To use them:
+
+```bash
+# Build with debug info (default)
+make
+
+# Use debugger (Mesen recommended for best debugging)
+mesen build/mitosis_panic.nes
+```
+
+## Asset Integration
+
+### Graphics (CHR-ROM)
+
+The CHR file is embedded automatically during linking:
+- Location: `graphics/game.chr`
+- Size: Exactly 8192 bytes (8KB)
+- Format: Raw NES CHR-ROM data
+
+See `graphics/CHR_MAP.md` for tile organization and `ASSET_PIPELINE.md` for creation workflow.
+
+### Audio (Future)
+
+FamiTone2 audio integration is planned:
+- Music: `audio/music/*.txt` (FamiTone2 format)
+- SFX: `audio/sfx/*.txt` (FamiTone2 format)
+
+Audio Engineer will integrate FamiTone2 engine and provide assembly includes.
+
 ## Team Collaboration
 
 - **Chief Engineer**: Main assembly code, build system, core engine
-- **Graphics Engineer**: CHR file (graphics/game.chr), sprite design
-- **Audio Engineer**: Sound engine integration (future)
-- **Integration Engineer**: Asset pipeline, build automation
+- **Graphics Engineer**: CHR file (graphics/game.chr), sprite design, tile mapping
+- **Audio Engineer**: Sound engine integration (FamiTone2)
+- **Integration Engineer**: Asset pipeline, build automation, documentation
 - **QA Engineer**: Testing, verification, bug reports
+
+---
+
+**Build System Version**: 1.0
+**Last Updated**: 2026-02-14
+**Maintainer**: Integration Engineer

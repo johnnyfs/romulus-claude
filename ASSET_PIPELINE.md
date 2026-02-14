@@ -1,0 +1,416 @@
+# MITOSIS PANIC - Asset Pipeline
+
+This document describes how to create, integrate, and manage graphics and audio assets for MITOSIS PANIC.
+
+## Graphics Pipeline
+
+### Overview
+
+NES graphics use CHR-ROM format, where tiles are stored as 8x8 pixel patterns with 4-color palettes. MITOSIS PANIC uses a single 8KB CHR file containing all sprites and background tiles.
+
+### CHR File Structure
+
+- **File**: `graphics/game.chr`
+- **Size**: 8192 bytes (8KB) exactly
+- **Format**: iNES CHR-ROM (raw tile data)
+- **Capacity**: 512 tiles (256 for sprites, 256 for background)
+
+### Tile Organization
+
+The `game.chr` file should be organized as follows:
+
+```
+Tiles $00-$0F: Player cell sprites (16 tiles)
+  $00-$03: Cell animation frame 1 (2x2 metatile)
+  $04-$07: Cell animation frame 2
+  $08-$0B: Cell animation frame 3
+  $0C-$0F: Cell animation frame 4
+
+Tiles $10-$1F: Antibody enemy sprites (16 tiles)
+  $10-$13: Antibody type 1 (horizontal patrol)
+  $14-$17: Antibody type 2 (vertical patrol)
+  $18-$1B: Antibody type 3 (diagonal sweep)
+  $1C-$1F: Antibody type 4 (circular orbit)
+
+Tiles $20-$2F: Nutrient and particle sprites (16 tiles)
+  $20-$23: Nutrient animation frames (4 frames)
+  $24-$27: Collection particle effect
+  $28-$2B: Division effect
+  $2C-$2F: Death explosion
+
+Tiles $30-$3F: UI elements (16 tiles)
+  $30-$37: Number font (0-7)
+  $38-$3F: Number font (8-9) + symbols
+
+Tiles $40-$FF: Reserved for future sprites
+
+Tiles $100-$1FF: Background tiles (256 tiles)
+  $100-$10F: Petri dish pattern tiles
+  $110-$11F: Grid lines
+  $120-$12F: UI border elements
+  $130-$1FF: Reserved
+```
+
+### Creating CHR Files
+
+#### Method 1: Using YY-CHR (Recommended)
+
+1. **Download YY-CHR**
+   - Homepage: https://www.romhacking.net/utilities/119/
+   - Cross-platform NES tile editor
+
+2. **Create New CHR**
+   - File → New → 8KB CHR-ROM
+   - Set palette to NES colors
+   - Draw tiles in 8x8 grid
+
+3. **Organize Tiles**
+   - Follow tile organization above
+   - Use grid view to see tile numbers
+   - Export: File → Save As → `game.chr`
+
+4. **Verify**
+   ```bash
+   ls -l graphics/game.chr
+   # Should show exactly 8192 bytes
+   ```
+
+#### Method 2: Using NES Screen Tool
+
+1. **Download NES Screen Tool**
+   - Homepage: https://shiru.untergrund.net/software.shtml
+   - Integrated tileset and nametable editor
+
+2. **Import/Create Graphics**
+   - Import PNG images with NES palette
+   - Auto-convert to 8x8 tiles
+   - Deduplicate tiles automatically
+
+3. **Export CHR**
+   - Tileset → Export CHR → `game.chr`
+
+#### Method 3: Converting PNG with Pillow (Python)
+
+For automation, use a Python script:
+
+```python
+from PIL import Image
+
+# Convert PNG to CHR format
+# (Script would go here - details available from Graphics Engineer)
+```
+
+### Sprite Specifications
+
+See `assets/specs/sprite_specs.md` for detailed specifications:
+- Cell sprites: 16x16 pixels, 4 animation frames
+- Antibodies: 16x16 pixels, 4 types with distinct designs
+- Nutrients: 8x8 pixels, rotating animation
+- Effects: Various sizes
+
+### Palettes
+
+NES supports 8 palettes total (4 for sprites, 4 for background), each with 4 colors.
+
+**Sprite Palettes** (defined in assembly code):
+```
+Palette 0: Cell (blues/cyans)
+  $0F (black), $2C (cyan), $1C (light blue), $0C (white)
+
+Palette 1: Antibody (reds)
+  $0F (black), $16 (red), $26 (light red), $36 (pink)
+
+Palette 2: Nutrient (yellows/greens)
+  $0F (black), $1A (green), $2A (light green), $38 (yellow)
+
+Palette 3: Effects
+  $0F (black), $30 (white), $20 (light gray), $10 (gray)
+```
+
+**Background Palette**:
+```
+Palette 0: Petri dish (blues)
+  $0F (black), $11 (dark blue), $21 (blue), $31 (light blue)
+```
+
+### Integrating Graphics
+
+1. **Place CHR File**
+   ```bash
+   cp your_tiles.chr graphics/game.chr
+   ```
+
+2. **Update Assembly** (if tile numbers changed)
+   Edit `src/sprites.asm` or equivalent to reference correct tile indices.
+
+3. **Rebuild ROM**
+   ```bash
+   make clean
+   make
+   ```
+
+4. **Test in Emulator**
+   ```bash
+   make test
+   ```
+
+### Graphics Workflow
+
+```
+[Artist creates sprites]
+    ↓
+[Export to PNG with NES palette]
+    ↓
+[Import to YY-CHR or NES Screen Tool]
+    ↓
+[Arrange tiles according to organization plan]
+    ↓
+[Export as game.chr (8KB exactly)]
+    ↓
+[Place in graphics/ directory]
+    ↓
+[Update assembly code tile references]
+    ↓
+[Build and test ROM]
+```
+
+---
+
+## Audio Pipeline
+
+### Overview
+
+MITOSIS PANIC uses the FamiTone2 sound engine for music and sound effects. Audio is composed in FamiTracker and exported to assembly-compatible format.
+
+### Audio File Structure
+
+```
+audio/
+├── music/
+│   └── bgm_main.txt          # Background music (FamiTone2 text format)
+├── sfx/
+│   ├── collect.txt           # Nutrient collection sound
+│   ├── mitosis.txt           # Cell division sound
+│   ├── death.txt             # Cell death sound
+│   └── spawn.txt             # Antibody spawn sound
+└── generated/                # Auto-generated by build (gitignored)
+    ├── music_data.s          # Assembled music data
+    └── sfx_data.s            # Assembled SFX data
+```
+
+### Creating Sound Effects
+
+#### Using FamiTracker
+
+1. **Download FamiTracker**
+   - Homepage: http://famitracker.com/
+   - Windows only (use Wine on macOS/Linux)
+
+2. **Create New Module**
+   - File → New
+   - Module Properties → Expansion Chip: None (standard NES)
+
+3. **Compose SFX**
+   - Keep SFX short (0.5-2 seconds)
+   - Use appropriate channels:
+     - Pulse 1/2: Melodic sounds (collection, division)
+     - Triangle: Bass/low tones
+     - Noise: Explosions, impacts (death sound)
+
+4. **Export to FamiTone2**
+   - File → Export Text
+   - Save as `audio/sfx/sound_name.txt`
+   - Check "FamiTone2 format" option
+
+#### Sound Effect Specifications
+
+See `assets/specs/audio_specs.md` for detailed audio design requirements:
+
+- **Collection SFX**: Short upward blip (100ms), cheerful
+- **Mitosis SFX**: Triumphant jingle (500ms), splitting sound
+- **Death SFX**: Harsh crash (300ms), noise channel
+- **Spawn SFX**: Ominous low tone (400ms), warning
+
+### Creating Background Music
+
+1. **Compose in FamiTracker**
+   - Tempo: ~100 BPM (minimal ambient style)
+   - Length: 30-60 seconds looping
+   - Style: Tetris Type B, laboratory atmosphere
+   - Channels: Use all 4 channels (2x Pulse, Triangle, Noise)
+
+2. **Export to FamiTone2**
+   - File → Export Text → `audio/music/bgm_main.txt`
+
+3. **Test Loop**
+   - Ensure clean loop point (no audio clicks)
+
+### Integrating Audio Assets
+
+#### Current Status
+
+The build system is ready for audio integration. When the Audio Engineer provides FamiTone2-compatible files:
+
+1. **Place Audio Files**
+   ```bash
+   cp bgm_main.txt audio/music/
+   cp collect.txt audio/sfx/
+   cp mitosis.txt audio/sfx/
+   cp death.txt audio/sfx/
+   ```
+
+2. **Build System Auto-Integration** (future)
+   The Makefile will eventually auto-convert FamiTone2 text files to assembly:
+   ```bash
+   # Future functionality (requires FamiTone2 tools)
+   text2data audio/music/bgm_main.txt audio/generated/music_data.s
+   text2data audio/sfx/*.txt audio/generated/sfx_data.s
+   ```
+
+3. **Manual Integration** (current method)
+   - Copy `.txt` files to `audio/` directory
+   - Audio Engineer integrates into assembly code manually
+   - Include generated `.s` files in build
+
+4. **Rebuild**
+   ```bash
+   make clean
+   make
+   make test
+   ```
+
+### Audio Workflow
+
+```
+[Composer creates music/SFX in FamiTracker]
+    ↓
+[Export to FamiTone2 text format (.txt)]
+    ↓
+[Place in audio/music/ or audio/sfx/]
+    ↓
+[FamiTone2 converter generates assembly (.s)]
+    ↓
+[Assembly code includes audio data]
+    ↓
+[Build ROM with audio integrated]
+    ↓
+[Test playback in emulator]
+```
+
+---
+
+## Testing Assets
+
+### Visual Testing
+
+1. **In Emulator**
+   ```bash
+   make test
+   ```
+   - Check sprite appearance
+   - Verify animations
+   - Test all palettes
+
+2. **Debugging Graphics**
+   - Use FCEUX → Tools → PPU Viewer
+   - View CHR-ROM in real-time
+   - Check palette assignments
+   - Verify tile usage
+
+### Audio Testing
+
+1. **In Emulator**
+   ```bash
+   make test
+   ```
+   - Trigger each sound effect
+   - Listen for audio artifacts
+   - Verify music loops cleanly
+
+2. **Debugging Audio**
+   - Use Mesen debugger for audio channels
+   - Check FamiTracker playback vs ROM playback
+   - Verify timing and tempo
+
+---
+
+## Asset Limits
+
+### Graphics Limits
+- **CHR-ROM Size**: 8KB (8192 bytes) total
+- **Sprites on Screen**: 64 maximum
+- **Sprites per Scanline**: 8 maximum
+- **Palettes**: 4 for sprites, 4 for background
+- **Colors per Palette**: 4 (including transparency)
+
+### Audio Limits
+- **Music Channels**: 4 (2x Pulse, 1x Triangle, 1x Noise)
+- **SFX Priority**: SFX can interrupt music channels
+- **Data Size**: ~2-4KB for music, ~1KB for all SFX (typical)
+
+---
+
+## Tools Quick Reference
+
+| Tool              | Purpose                | Platform      | Link                                      |
+|-------------------|------------------------|---------------|-------------------------------------------|
+| YY-CHR            | CHR tile editor        | Cross-platform| https://www.romhacking.net/utilities/119/ |
+| NES Screen Tool   | Tileset + nametables   | Windows       | https://shiru.untergrund.net/software.shtml|
+| FamiTracker       | Music/SFX composition  | Windows       | http://famitracker.com/                   |
+| FamiTone2         | Sound engine           | Assembly lib  | https://shiru.untergrund.net/code.shtml   |
+| FCEUX             | Emulator + debugger    | Cross-platform| https://fceux.com/                        |
+| Mesen             | Advanced emulator      | Cross-platform| https://www.mesen.ca/                     |
+
+---
+
+## Coordination
+
+### Graphics Engineer
+- Creates CHR file at `graphics/game.chr`
+- Follows tile organization plan
+- Coordinates tile indices with code
+
+### Audio Engineer
+- Creates FamiTone2 audio files
+- Integrates FamiTone2 engine into code
+- Exports to `audio/` directory
+
+### Integration Engineer (this role)
+- Maintains build system
+- Documents asset pipeline
+- Ensures assets build correctly
+
+---
+
+## Troubleshooting
+
+### CHR file wrong size
+```bash
+# CHR must be exactly 8192 bytes
+ls -l graphics/game.chr
+# If wrong size, recreate in YY-CHR as 8KB file
+```
+
+### Sprites not displaying
+- Check CHR file exists at `graphics/game.chr`
+- Verify tile indices in assembly code
+- Check palette data in code
+- Use FCEUX PPU Viewer to debug
+
+### Audio not playing
+- Verify FamiTone2 engine is initialized
+- Check audio files are included in build
+- Ensure SFX trigger code is correct
+- Test music separately from SFX
+
+### Build fails after adding assets
+- Check `make clean` then `make`
+- Verify file paths are correct
+- Check CHR file is exactly 8192 bytes
+- Review build log for specific errors
+
+---
+
+**Last Updated**: 2026-02-14
+**Maintainer**: Integration Engineer
+**For Questions**: Contact Graphics Engineer (CHR) or Audio Engineer (FamiTone2)

@@ -1,0 +1,57 @@
+# MITOSIS PANIC - Build Artifacts
+
+# Build directory
+build/
+*.o
+*.nes
+*.map
+*.dbg
+
+# NES-specific
+*.bin
+*.chr.tmp
+*.nam
+
+# cc65 toolchain outputs
+*.s
+*.lst
+
+# Audio tool outputs
+audio/*.s
+audio/*.inc
+audio/music_data.*
+audio/sfx_data.*
+
+# FamiTracker / FamiTone2 temporary files
+*.dnm
+*.bak
+
+# Emulator save states and battery saves
+*.fc0
+*.fc1
+*.fc2
+*.fc3
+*.fc4
+*.fc5
+*.fc6
+*.fc7
+*.fc8
+*.fc9
+*.fcs
+*.sav
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS-specific
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
