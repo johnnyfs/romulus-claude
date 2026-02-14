@@ -40,12 +40,13 @@
 
     ; Game state variables at $0500
     game_state = $0500
-    cell_count = $0501       ; Number of active cells
-    nutrient_count = $0502   ; Number of active nutrients
-    antibody_count = $0503   ; Number of active antibodies
-    score_lo = $0504
-    score_hi = $0505
-    game_over_flag = $0506   ; 0=playing, 1=game over
+    cell_count = $0501         ; Number of active cells
+    nutrient_count = $0502     ; Number of active nutrients
+    antibody_count = $0503     ; Number of active antibodies
+    nutrients_collected = $0504 ; Total nutrients collected (for mitosis trigger)
+    score_lo = $0505
+    score_hi = $0506
+    game_over_flag = $0507     ; 0=playing, 1=game over
 
 .segment "CODE"
 
@@ -240,17 +241,21 @@ init_game_state:
     lda #$5A
     sta rng_seed+1
 
-    ; Spawn initial nutrients
+    ; Initialize game state counters
     lda #0
     sta nutrient_count
+    sta nutrients_collected  ; FIX: Initialize mitosis counter
+    sta antibody_count
+    sta game_over_flag
+    sta score_lo
+    sta score_hi
+
+    ; Spawn initial nutrients
     jsr spawn_nutrient
     jsr spawn_nutrient
     jsr spawn_nutrient
 
     ; Spawn initial antibodies (start with 2)
-    lda #0
-    sta antibody_count
-    sta game_over_flag
     jsr spawn_antibody
     jsr spawn_antibody
 
@@ -920,6 +925,18 @@ collect_nutrient:
 
     ; Increment score (TODO: BCD math)
     inc score_lo
+
+    ; Increment nutrient collection counter
+    inc nutrients_collected
+
+    ; Check if we've collected 10 nutrients (mitosis trigger)
+    lda nutrients_collected
+    cmp #10
+    bcc :+              ; Less than 10, skip mitosis
+
+    ; Reset counter
+    lda #0
+    sta nutrients_collected
 
     ; Trigger mitosis if cell count < max
     lda cell_count
