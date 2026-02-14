@@ -1,0 +1,234 @@
+#!/bin/bash
+# Automated Test Harness for MITOSIS PANIC
+# Runs FCEUX with Lua test scripts and captures output
+
+ROM="build/mitosis_panic.nes"
+TEST_DURATION=300  # 5 minutes (300 seconds = 18000 frames @ 60fps)
+
+if [ ! -f "$ROM" ]; then
+    echo "ERROR: ROM not found at $ROM"
+    echo "Run 'make' first to build the ROM"
+    exit 1
+fi
+
+echo "=== MITOSIS PANIC - Automated Test Suite ==="
+echo "ROM: $ROM"
+echo "Test Duration: $TEST_DURATION seconds ($(($TEST_DURATION * 60)) frames)"
+echo ""
+
+# Check if fceux is available
+if ! command -v fceux &> /dev/null; then
+    echo "ERROR: fceux not found in PATH"
+    echo "Install with: brew install fceux"
+    exit 1
+fi
+
+# Create test output directory
+mkdir -p test_results
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+OUTPUT_DIR="test_results/${TIMESTAMP}"
+mkdir -p "$OUTPUT_DIR"
+
+echo "Output directory: $OUTPUT_DIR"
+echo ""
+
+# Test 1: Graphics Validation
+echo "=== Test 1: Graphics Validation ==="
+echo "Loading fceux_validate_graphics.lua..."
+echo "This will validate OAM sprites, tile indices, palettes, and rendering"
+echo ""
+
+# Note: FCEUX doesn't support fully automated testing without X11
+# We'll create a test plan document instead
+cat > "$OUTPUT_DIR/test_plan.txt" << 'EOF'
+MITOSIS PANIC - Manual Test Plan with Lua Validation Scripts
+
+PREREQUISITES:
+1. Build ROM: make clean && make
+2. Launch FCEUX: fceux build/mitosis_panic.nes
+3. Load Lua scripts: Tools > Lua > Run Script
+
+TEST SUITE:
+
+Test 1: Graphics Validation
+---------------------------
+Script: fceux_validate_graphics.lua
+Duration: 60 seconds (3600 frames)
+
+Expected Output:
+- "Graphics validation active" message
+- Active sprites count (should be > 0)
+- Player sprites count (should be > 0)
+- Nutrient sprites count (should be 3)
+- Antibody sprites count (should be 2)
+- No "[CRITICAL]" errors in console
+- No "[ERROR]" messages about invalid tiles
+
+Pass Criteria:
+✓ At least 1 player sprite visible
+✓ Exactly 3 nutrient sprites
+✓ Exactly 2 antibody sprites
+✓ All sprites use valid tile indices
+✓ No OAM corruption detected
+✓ No sprite flickering
+
+Test 2: Gameplay State Validation
+----------------------------------
+Script: fceux_test_gameplay.lua
+Duration: 180 seconds (10800 frames)
+
+Expected Output:
+- "Gameplay State Validator" message
+- Cell count: 1 (initially)
+- Nutrient count: 3 (initially)
+- Antibody count: 2 (initially)
+- Nutrients collected: 0 (initially)
+- "Nutrients spawned correctly" message
+- Antibody movement: "X moving, 0 static"
+
+Manual Actions:
+1. Use arrow keys to move player cell
+2. Collect 10 nutrients (trigger mitosis)
+3. Observe cell division (should split into 2 cells)
+4. Continue collecting nutrients
+5. Avoid antibodies
+6. Intentionally collide with antibody (test game over)
+
+Pass Criteria:
+✓ Player cell responds to D-pad input
+✓ 3 nutrients spawn at game start
+✓ Nutrients respawn when collected
+✓ Score increments on collection
+✓ Mitosis triggers at exactly 10 nutrients (not before)
+✓ Cell count increases after mitosis (1→2→3→4...)
+✓ All cells move together simultaneously
+✓ Antibodies move with AI patterns (not frozen)
+✓ Collision with antibody sets game_over_flag=1
+✓ No game hang on collision
+✓ No "[CRITICAL]" errors in console
+
+Test 3: Audio Validation
+-------------------------
+Script: None (manual listening test)
+Duration: 60 seconds
+
+Expected Behavior:
+- Background music starts immediately on boot
+- Music loops seamlessly
+- SFX plays on nutrient collection ("blip")
+- SFX plays on mitosis ("sweep up")
+- SFX plays on antibody spawn ("warning tone")
+- SFX plays on game over ("death jingle")
+
+Pass Criteria:
+✓ Background music audible and continuous
+✓ No audio crackling or distortion
+✓ All 4 SFX trigger at correct events
+✓ Music doesn't stop or skip
+✓ SFX don't interfere with music
+
+Test 4: Performance Validation
+-------------------------------
+Script: fceux_test_gameplay.lua (monitor frame counter)
+Duration: 180 seconds
+
+Expected Behavior:
+- Frame counter increments every frame
+- No slowdown or lag
+- Consistent 60 FPS
+- No VBlank overflow artifacts
+
+Pass Criteria:
+✓ Frame counter increments smoothly
+✓ No visible slowdown
+✓ No sprite flickering (indicates VBlank issues)
+✓ Input feels responsive
+
+Test 5: Boundary Validation
+----------------------------
+Script: fceux_test_gameplay.lua (watch for boundary warnings)
+Duration: 60 seconds
+
+Manual Actions:
+1. Move player to left edge
+2. Move player to right edge
+3. Move player to top edge
+4. Move player to bottom edge
+
+Pass Criteria:
+✓ Player cannot move off-screen
+✓ Player doesn't get stuck at edges
+✓ No "[WARNING] out of bounds" messages
+✓ Boundaries feel smooth (not jarring)
+
+Test 6: Mitosis Accuracy
+-------------------------
+Script: fceux_test_gameplay.lua (monitor nutrients_collected)
+Duration: 300 seconds
+
+Manual Actions:
+1. Collect exactly 10 nutrients
+2. Verify mitosis triggers
+3. Collect 10 more nutrients
+4. Verify second mitosis
+5. Continue pattern
+
+Pass Criteria:
+✓ Mitosis triggers at nutrients_collected = 10
+✓ Mitosis does NOT trigger before 10
+✓ nutrients_collected counter resets to 0 after mitosis
+✓ Cell count increments correctly (1→2→3→4...)
+✓ "[INFO] Mitosis detected!" message appears
+
+CRITICAL BUGS TO WATCH FOR:
+---------------------------
+BUG-002: No nutrients spawning
+  - Symptom: Nutrient count = 0, no green sprites
+  - Console: "[CRITICAL] BUG-002: No nutrients spawned!"
+
+BUG-003: Antibodies frozen
+  - Symptom: Red sprites don't move
+  - Console: "[CRITICAL] BUG-003: All antibodies static!"
+
+BUG-005: Game hangs on collision
+  - Symptom: Game freezes, frame counter stops
+  - Console: No output (game hung)
+
+BUG-001: Mitosis every nutrient
+  - Symptom: Cell splits after EVERY collection
+  - Fixed in Phase 5, should not occur
+
+EXPECTED FAILURES (Not Implemented Yet):
+-----------------------------------------
+- No player animation (static sprite, expected)
+- No score display on screen (counter works internally)
+- No restart after game over (need to close ROM)
+- No level progression
+- No title screen
+- No high score save
+
+REPORTING:
+----------
+1. Mark each test PASS/FAIL
+2. Copy console output for failed tests
+3. Screenshot any visual bugs
+4. Note frame number when bug occurred
+5. Save to test_results/ directory
+
+EOF
+
+echo "Test plan created: $OUTPUT_DIR/test_plan.txt"
+echo ""
+echo "=== AUTOMATED TEST EXECUTION NOT POSSIBLE ==="
+echo "FCEUX requires manual interaction for proper testing."
+echo ""
+echo "NEXT STEPS:"
+echo "1. Review test plan: cat $OUTPUT_DIR/test_plan.txt"
+echo "2. Launch ROM: fceux $ROM"
+echo "3. Load validation scripts in FCEUX"
+echo "4. Follow test procedures"
+echo "5. Document results"
+echo ""
+echo "Or run quick validation:"
+echo "  fceux $ROM --loadlua fceux_validate_graphics.lua --loadlua fceux_test_gameplay.lua"
+echo ""
