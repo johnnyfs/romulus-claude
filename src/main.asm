@@ -40,10 +40,12 @@
 
     ; Game state variables at $0500
     game_state = $0500
-    cell_count = $0501     ; Number of active cells
-    nutrient_count = $0502 ; Number of active nutrients
-    score_lo = $0503
-    score_hi = $0504
+    cell_count = $0501       ; Number of active cells
+    nutrient_count = $0502   ; Number of active nutrients
+    antibody_count = $0503   ; Number of active antibodies
+    score_lo = $0504
+    score_hi = $0505
+    game_over_flag = $0506   ; 0=playing, 1=game over
 
 .segment "CODE"
 
@@ -119,11 +121,26 @@ nmi_handler:
     inc frame_count
 
     ; Game logic during VBlank
+
+    ; Check if game is over
+    lda game_over_flag
+    bne game_over_state
+
+    ; Normal gameplay
     jsr read_controller
     jsr update_cells
+    jsr update_antibodies
     jsr update_nutrients
     jsr check_collisions
     jsr render_entities
+    jmp nmi_done
+
+game_over_state:
+    ; Game over - just render, wait for restart
+    jsr render_entities
+    ; TODO: Check for Start button to restart
+
+nmi_done:
 
     ; Restore registers
     pla
@@ -229,6 +246,13 @@ init_game_state:
     jsr spawn_nutrient
     jsr spawn_nutrient
     jsr spawn_nutrient
+
+    ; Spawn initial antibodies (start with 2)
+    lda #0
+    sta antibody_count
+    sta game_over_flag
+    jsr spawn_antibody
+    jsr spawn_antibody
 
     rts
 
@@ -444,6 +468,40 @@ skip_render_nutrient:
     cpx #128        ; 8 nutrients * 16 bytes
     bne render_nutrient_loop
 
+    ; Now render antibodies
+    ldx #0          ; Antibody index
+
+render_antibody_loop:
+    ; Check if antibody is active
+    lda $0400,x     ; ANTIBODY_DATA base
+    beq skip_render_antibody
+
+    ; Render antibody as a sprite
+    lda $0402,x     ; Y position
+    sta $0200,y
+    iny
+
+    lda #$02        ; Tile index (Y-shaped antibody from CHR)
+    sta $0200,y
+    iny
+
+    lda #$01        ; Attributes (palette 1 = red)
+    sta $0200,y
+    iny
+
+    lda $0401,x     ; X position
+    sta $0200,y
+    iny
+
+skip_render_antibody:
+    ; Move to next antibody
+    txa
+    clc
+    adc #16
+    tax
+    cpx #128        ; 8 antibodies * 16 bytes
+    bne render_antibody_loop
+
     rts
 
 ; ============================================================
@@ -452,6 +510,197 @@ skip_render_nutrient:
 update_nutrients:
     ; For now, nutrients are static
     ; TODO: Add animation frames later
+    rts
+
+; ============================================================
+; update_antibodies - Update antibody AI and movement
+; ============================================================
+update_antibodies:
+    ldx #0
+
+update_antibody_loop:
+    ; Check if antibody is active
+    lda $0400,x     ; ANTIBODY_DATA active flag
+    bne :+
+    jmp next_antibody
+:
+
+    ; Get AI type
+    lda $0405,x     ; AI type offset
+    cmp #0
+    beq ai_chase
+    cmp #1
+    beq ai_patrol_h
+    cmp #2
+    beq ai_patrol_v
+    jmp next_antibody
+
+ai_chase:
+    ; Chase AI: move toward nearest cell
+    ; Simple implementation: move toward cell 0
+    lda cell_data+1 ; Cell 0 X
+    cmp $0401,x     ; Antibody X
+    bcc chase_left
+    beq chase_check_y
+    ; Cell is to the right
+    inc $0401,x
+    jmp chase_check_y
+chase_left:
+    dec $0401,x
+
+chase_check_y:
+    lda cell_data+2 ; Cell 0 Y
+    cmp $0402,x     ; Antibody Y
+    bcc chase_up
+    beq next_antibody
+    ; Cell is below
+    inc $0402,x
+    jmp next_antibody
+chase_up:
+    dec $0402,x
+    jmp next_antibody
+
+ai_patrol_h:
+    ; Horizontal patrol
+    lda $0403,x     ; X velocity
+    beq :+          ; If velocity is 0, set it
+    clc
+    adc $0401,x     ; Apply velocity to X
+    sta $0401,x
+
+    ; Check bounds and reverse
+    cmp #ARENA_LEFT+16
+    bcc patrol_h_reverse
+    cmp #ARENA_RIGHT-16
+    bcs patrol_h_reverse
+    jmp next_antibody
+
+:   lda #2          ; Initial velocity
+    sta $0403,x
+    jmp next_antibody
+
+patrol_h_reverse:
+    lda $0403,x
+    eor #$FF        ; Negate velocity (two's complement)
+    clc
+    adc #1
+    sta $0403,x
+    jmp next_antibody
+
+ai_patrol_v:
+    ; Vertical patrol
+    lda $0404,x     ; Y velocity
+    beq :+          ; If velocity is 0, set it
+    clc
+    adc $0402,x     ; Apply velocity to Y
+    sta $0402,x
+
+    ; Check bounds and reverse
+    cmp #ARENA_TOP+16
+    bcc patrol_v_reverse
+    cmp #ARENA_BOTTOM-16
+    bcs patrol_v_reverse
+    jmp next_antibody
+
+:   lda #2          ; Initial velocity
+    sta $0404,x
+    jmp next_antibody
+
+patrol_v_reverse:
+    lda $0404,x
+    eor #$FF        ; Negate velocity
+    clc
+    adc #1
+    sta $0404,x
+
+next_antibody:
+    txa
+    clc
+    adc #16
+    tax
+    cpx #128        ; 8 antibodies * 16 bytes
+    beq :+
+    jmp update_antibody_loop
+:
+    rts
+
+; ============================================================
+; spawn_antibody - Spawn a new antibody
+; ============================================================
+spawn_antibody:
+    ; Find first inactive antibody slot
+    ldx #0
+find_antibody_slot:
+    lda $0400,x     ; Check active flag
+    beq found_antibody_slot
+    txa
+    clc
+    adc #16
+    tax
+    cpx #128
+    bne find_antibody_slot
+    rts             ; No free slots
+
+found_antibody_slot:
+    ; Activate antibody
+    lda #1
+    sta $0400,x     ; Active flag
+
+    ; Spawn at edge of arena
+    jsr random
+    and #$01
+    bne spawn_ab_vertical
+
+spawn_ab_horizontal:
+    ; Spawn on left or right edge
+    jsr random
+    and #$01
+    bne :+
+    lda #ARENA_LEFT+8
+    sta $0401,x
+    jmp :++
+:   lda #ARENA_RIGHT-8
+    sta $0401,x
+:
+    ; Random Y position
+    jsr random
+    and #$7F
+    clc
+    adc #48
+    sta $0402,x
+    ; Set horizontal patrol AI
+    lda #1
+    sta $0405,x
+    lda #2
+    sta $0403,x     ; Initial velocity
+    jmp spawn_ab_done
+
+spawn_ab_vertical:
+    ; Spawn on top or bottom edge
+    jsr random
+    and #$01
+    bne :+
+    lda #ARENA_TOP+8
+    sta $0402,x
+    jmp :++
+:   lda #ARENA_BOTTOM-8
+    sta $0402,x
+:
+    ; Random X position
+    jsr random
+    and #$7F
+    clc
+    adc #56
+    sta $0401,x
+    ; Set vertical patrol AI
+    lda #2
+    sta $0405,x
+    lda #2
+    sta $0404,x     ; Initial velocity
+
+spawn_ab_done:
+    ; Increment antibody count
+    inc antibody_count
     rts
 
 ; ============================================================
@@ -525,9 +774,80 @@ random:
     rts
 
 ; ============================================================
-; check_collisions - Check cell vs nutrient collisions
+; check_collisions - Check all collision types
 ; ============================================================
 check_collisions:
+    ; First check cell vs antibody (game over condition)
+    jsr check_cell_antibody_collision
+
+    ; Then check cell vs nutrient (collection)
+    jsr check_cell_nutrient_collision
+    rts
+
+; ============================================================
+; check_cell_antibody_collision - Check for game over
+; ============================================================
+check_cell_antibody_collision:
+    ldx #0
+
+check_cell_ab_loop:
+    lda cell_data,x
+    beq next_cell_ab
+
+    ; Check against each antibody
+    ldy #0
+
+check_ab_loop:
+    lda $0400,y     ; Check if antibody is active
+    beq next_ab
+
+    ; AABB collision check
+    lda cell_data+1,x   ; Cell X
+    sec
+    sbc $0401,y         ; Antibody X
+    bpl :+
+    eor #$FF
+    clc
+    adc #1
+:   cmp #14             ; Collision threshold (slightly larger)
+    bcs next_ab
+
+    lda cell_data+2,x   ; Cell Y
+    sec
+    sbc $0402,y         ; Antibody Y
+    bpl :+
+    eor #$FF
+    clc
+    adc #1
+:   cmp #14
+    bcs next_ab
+
+    ; COLLISION! Game over
+    lda #1
+    sta game_over_flag
+    rts
+
+next_ab:
+    tya
+    clc
+    adc #16
+    tay
+    cpy #128
+    bne check_ab_loop
+
+next_cell_ab:
+    txa
+    clc
+    adc #16
+    tax
+    cpx #240
+    bne check_cell_ab_loop
+    rts
+
+; ============================================================
+; check_cell_nutrient_collision - Check for collection
+; ============================================================
+check_cell_nutrient_collision:
     ; For each active cell
     ldx #0
 
