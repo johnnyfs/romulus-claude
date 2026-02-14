@@ -1,8 +1,27 @@
 ; MITOSIS PANIC - Main Entry Point
-; Phase 2: Controller Input & Entity System
+; Phase 5: Audio Integration with FamiTone2
 ; Assembles with ca65 (cc65 toolchain)
 
 .include "constants.inc"
+
+; FamiTone2 configuration (must be defined BEFORE including famitone2.s)
+FT_PAL_SUPPORT    = 0      ; 0 = no PAL support
+FT_NTSC_SUPPORT   = 1      ; 1 = NTSC support
+FT_SFX_ENABLE     = 1      ; Enable sound effects
+FT_SFX_STREAMS    = 4      ; Number of simultaneous SFX
+FT_THREAD         = 1      ; Thread-safe mode
+FT_DPCM_ENABLE    = 0      ; 0 = no DPCM samples (saves ROM)
+FT_DPCM_OFF       = $c000  ; DPCM data location
+FT_PITCH_FIX      = 0      ; No pitch fix (NTSC only)
+
+; FamiTone2 SFX IDs (from audio_constants.s)
+SFX_MITOSIS       = 0
+SFX_NUTRIENT_A    = 1
+SFX_ANTIBODY_WARN = 4
+SFX_GAME_OVER     = 7
+
+; Music track IDs
+MUSIC_MAIN_THEME  = 0
 
 .segment "HEADER"
     .byte "NES", $1A    ; iNES header identifier
@@ -22,6 +41,7 @@
     temp:         .res 1      ; Temporary variable
     temp2:        .res 1      ; Temporary variable 2
     rng_seed:     .res 2      ; Random number generator seed
+    FT_TEMP:      .res 3      ; FamiTone2 temporary variables
 
 .segment "BSS"
     ; OAM shadow buffer (sprites) at $0200
@@ -47,6 +67,10 @@
     score_lo = $0505
     score_hi = $0506
     game_over_flag = $0507     ; 0=playing, 1=game over
+
+    ; FamiTone2 RAM (186 bytes at $0600-$06BA)
+    FT_BASE_ADR = $0600
+    .res 186                   ; FamiTone2 workspace
 
 .segment "CODE"
 
@@ -91,6 +115,9 @@ reset_handler:
     ; Set up sprites
     jsr init_sprites
 
+    ; Initialize audio system
+    jsr init_audio
+
     ; Enable rendering
     lda #%10000000  ; Enable NMI
     sta $2000
@@ -120,6 +147,9 @@ nmi_handler:
 
     ; Increment frame counter
     inc frame_count
+
+    ; Update audio engine (must be done every frame)
+    jsr FamiToneUpdate
 
     ; Game logic during VBlank
 
@@ -704,6 +734,11 @@ spawn_ab_vertical:
     sta $0404,x     ; Initial velocity
 
 spawn_ab_done:
+    ; Play antibody spawn warning sound
+    lda #SFX_ANTIBODY_WARN
+    ldx #FT_SFX_CH1         ; Pulse 2 channel
+    jsr FamiToneSfxPlay
+
     ; Increment antibody count
     inc antibody_count
     rts
@@ -830,6 +865,12 @@ check_ab_loop:
     ; COLLISION! Game over
     lda #1
     sta game_over_flag
+
+    ; Play game over sound
+    lda #SFX_GAME_OVER
+    ldx #FT_SFX_CH0         ; Pulse 1 channel
+    jsr FamiToneSfxPlay
+
     rts
 
 next_ab:
@@ -916,6 +957,11 @@ next_cell_collision:
 ; Input: X = cell index, Y = nutrient index
 ; ============================================================
 collect_nutrient:
+    ; Play nutrient collection sound
+    lda #SFX_NUTRIENT_A
+    ldx #FT_SFX_CH0         ; Pulse 1 channel
+    jsr FamiToneSfxPlay
+
     ; Deactivate nutrient
     lda #0
     sta $0480,y
@@ -942,6 +988,12 @@ collect_nutrient:
     lda cell_count
     cmp #MAX_CELLS
     bcs :+
+
+    ; Play mitosis sound
+    lda #SFX_MITOSIS
+    ldx #FT_SFX_CH0         ; Pulse 1 channel
+    jsr FamiToneSfxPlay
+
     jsr trigger_mitosis
 :
 
@@ -1002,6 +1054,27 @@ found_cell_slot:
     rts
 
 ; ============================================================
+; init_audio - Initialize FamiTone2 sound engine
+; ============================================================
+init_audio:
+    ; Initialize FamiTone2
+    lda #0                      ; 0 = NTSC
+    ldx #<music_data
+    ldy #>music_data
+    jsr FamiToneInit
+
+    ; Initialize sound effects
+    ldx #<sfx_data
+    ldy #>sfx_data
+    jsr FamiToneSfxInit
+
+    ; Start background music
+    lda #MUSIC_MAIN_THEME
+    jsr FamiToneMusicPlay
+
+    rts
+
+; ============================================================
 ; Data Section
 ; ============================================================
 .segment "RODATA"
@@ -1026,3 +1099,16 @@ sprite_palette:
 .segment "CHR"
     ; Include the CHR data file
     .incbin "../graphics/game.chr"
+
+; ============================================================
+; Audio Engine and Data
+; ============================================================
+.segment "CODE"
+
+; Include FamiTone2 sound engine
+.include "../audio/engine/famitone2.s"
+
+; Include music and SFX data
+.segment "RODATA"
+    .include "../audio/exports/music_data.s"
+    .include "../audio/exports/sfx_data.s"
