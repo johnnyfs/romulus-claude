@@ -1,0 +1,174 @@
+MITOSIS PANIC - FamiTracker Project Creation Notes
+
+FILE: cellular_division.ftm (to be created)
+
+This file documents how to create the main music theme in FamiTracker.
+Actual .ftm file creation requires FamiTracker software installed.
+
+==============================================================================
+PROJECT SETUP
+==============================================================================
+
+1. Launch FamiTracker
+2. File → New
+3. Set parameters:
+   - Machine: NTSC
+   - Expansion chip: None (2A03 only)
+
+4. Module → Module Properties:
+   - Speed: 6 (default NTSC)
+   - Tempo: 140 BPM
+   - Vibrato: New style
+
+==============================================================================
+INSTRUMENT DEFINITIONS
+==============================================================================
+
+Instrument 00 - Pulse Lead (25% duty)
+-----------------------------------
+Type: 2A03 Pulse
+Volume envelope: F E D C B A 9 8 7 6 (loop point at frame 5)
+Arpeggio: None
+Pitch: None
+Duty cycle sequence: 0 (25%) [sustain]
+
+Instrument 01 - Pulse Harmony (50% duty)
+--------------------------------------
+Type: 2A03 Pulse
+Volume envelope: D C B A 9 8 7 6 (loop point at frame 4)
+Arpeggio: None
+Pitch: None
+Duty cycle sequence: 1 (50%) [sustain]
+
+Instrument 02 - Pulse Staccato (50% duty)
+---------------------------------------
+Type: 2A03 Pulse
+Volume envelope: F C 8 4 2 0 (no loop, release)
+Arpeggio: None
+Pitch: None
+Duty cycle sequence: 1 (50%)
+
+Instrument 10 - Triangle Bass
+--------------------------
+Type: 2A03 Triangle
+(Triangle has no volume control, use note length for articulation)
+
+Instrument 20 - Hi-Hat
+-------------------
+Type: 2A03 Noise
+Volume envelope: 8 6 4 2 0 (quick decay, no loop)
+Pitch: 1-2 (short mode, high pitched)
+
+==============================================================================
+PATTERN STRUCTURE
+==============================================================================
+
+Total: 32 patterns (or 4 patterns if using 8-bar patterns)
+Speed: 6 frames per row
+Rows per pattern: 32 (or 64 for 8-bar patterns)
+
+Section layout:
+- Pattern 0-1: Section A (bars 1-8)
+- Pattern 2-3: Section B (bars 9-16)
+- Pattern 4-5: Section A' repeat (bars 17-24)
+- Pattern 6-7: Section B' variation (bars 25-32)
+
+Loop point: Set at start of Pattern 0, frame 0
+
+==============================================================================
+CHANNEL ASSIGNMENTS
+==============================================================================
+
+Pulse 1:   Main melody (Instrument 00, 02 for staccato parts)
+Pulse 2:   Harmony/countermelody (Instrument 01, 02)
+Triangle:  Bass line (Instrument 10)
+Noise:     Hi-hat percussion (Instrument 20)
+
+==============================================================================
+COMPOSITION REFERENCE
+==============================================================================
+
+See MUSIC_DESIGN.md for complete bar-by-bar notation.
+
+Key points:
+- C Major throughout
+- Chord progression: C - F - G - C (I-IV-V-I)
+- 8th note predominant rhythm
+- Slight swing timing (delay even 8ths by 1 tick)
+- Section A: Bouncy, organic melody
+- Section B: Higher register, more urgent
+- Section B': Breakdown in bars 31-32 (triangle + noise only)
+
+==============================================================================
+EFFECTS USAGE
+==============================================================================
+
+Gxx - Note delay (for swing timing)
+    Example: G01 delays note by 1 tick
+
+Qxy - Note up (for portamento effects in SFX)
+Rxy - Note down
+
+Sxx - Note cut (for staccato articulation)
+    Example: S08 cuts note at tick 8
+
+==============================================================================
+EXPORT PROCESS
+==============================================================================
+
+After composition is complete:
+
+1. File → Export as NSF
+   - Name: cellular_division.nsf
+   - Include: All songs
+   - Save to: audio/music/
+
+2. Convert to FamiTone2 format using text2data:
+
+   Command line:
+   > text2data cellular_division.nsf
+
+   This generates: cellular_division.s (assembly data)
+
+3. Move to exports:
+   > copy cellular_division.s ../exports/music_data.s
+
+4. Verify:
+   - Check file size (should be 2-5 KB typically)
+   - Look for loop point marker in data
+   - Ensure all 4 channels are present
+
+==============================================================================
+TESTING IN FAMITRACKER
+==============================================================================
+
+Before export:
+- Play through entire loop 3-5 times
+- Listen for smooth loop point (no click or gap)
+- Check channel balance (no channel too loud/quiet)
+- Verify melody is clear and memorable
+- Ensure bass provides solid foundation
+- Test that percussion adds energy without overpowering
+
+==============================================================================
+ALTERNATIVE: 0CC-FAMITRACKER
+==============================================================================
+
+If using 0CC-FamiTracker (enhanced version):
+- Export process is similar
+- Additional features available (Groove, N163, etc.)
+- Ensure export uses "FamiTracker TXT" format for compatibility
+- FamiTone2 tools may need specific export format
+
+Website: https://hertzdevil.info/programs/
+
+==============================================================================
+PLACEHOLDER STATUS
+==============================================================================
+
+This is a specification document. Actual .ftm file needs to be created
+using FamiTracker software following these specifications.
+
+Once created, place cellular_division.ftm in this directory.
+
+==============================================================================
