@@ -21,6 +21,7 @@
     controller1_prev: .res 1  ; Previous frame controller state
     temp:         .res 1      ; Temporary variable
     temp2:        .res 1      ; Temporary variable 2
+    rng_seed:     .res 2      ; Random number generator seed
 
 .segment "BSS"
     ; OAM shadow buffer (sprites) at $0200
@@ -39,9 +40,10 @@
 
     ; Game state variables at $0500
     game_state = $0500
-    cell_count = $0501  ; Number of active cells
-    score_lo = $0502
-    score_hi = $0503
+    cell_count = $0501     ; Number of active cells
+    nutrient_count = $0502 ; Number of active nutrients
+    score_lo = $0503
+    score_hi = $0504
 
 .segment "CODE"
 
@@ -119,7 +121,9 @@ nmi_handler:
     ; Game logic during VBlank
     jsr read_controller
     jsr update_cells
-    jsr render_cells
+    jsr update_nutrients
+    jsr check_collisions
+    jsr render_entities
 
     ; Restore registers
     pla
@@ -213,6 +217,19 @@ init_game_state:
     cpx #240        ; 15 more cells * 16 bytes = 240
     bne :-
 
+    ; Initialize RNG seed with a "random" value
+    lda #$A5
+    sta rng_seed
+    lda #$5A
+    sta rng_seed+1
+
+    ; Spawn initial nutrients
+    lda #0
+    sta nutrient_count
+    jsr spawn_nutrient
+    jsr spawn_nutrient
+    jsr spawn_nutrient
+
     rts
 
 ; ============================================================
@@ -249,7 +266,9 @@ update_cells:
 update_cell_loop:
     ; Check if cell is active
     lda cell_data,x
-    beq next_cell   ; Skip if inactive
+    bne :+
+    jmp next_cell   ; Skip if inactive
+:
 
     ; Apply controller input to velocity
     ; D-Pad mapping: bit 7=A, 6=B, 5=Select, 4=Start, 3=Up, 2=Down, 1=Left, 0=Right
@@ -290,6 +309,30 @@ update_cell_loop:
     adc cell_data+4,x   ; Add Y velocity
     sta cell_data+2,x
 
+    ; Clamp to arena boundaries
+    lda cell_data+1,x   ; Check X position
+    cmp #ARENA_LEFT
+    bcs :+
+    lda #ARENA_LEFT     ; Clamp to left edge
+    sta cell_data+1,x
+:   lda cell_data+1,x
+    cmp #ARENA_RIGHT
+    bcc :+
+    lda #ARENA_RIGHT-1  ; Clamp to right edge
+    sta cell_data+1,x
+:
+    lda cell_data+2,x   ; Check Y position
+    cmp #ARENA_TOP
+    bcs :+
+    lda #ARENA_TOP      ; Clamp to top edge
+    sta cell_data+2,x
+:   lda cell_data+2,x
+    cmp #ARENA_BOTTOM
+    bcc :+
+    lda #ARENA_BOTTOM-1 ; Clamp to bottom edge
+    sta cell_data+2,x
+:
+
     ; Apply friction (slow down velocity)
     lda cell_data+3,x
     beq :+              ; Skip if velocity is 0
@@ -316,14 +359,15 @@ next_cell:
     adc #16
     tax
     cpx #240        ; Check all 15 cells (16 * 15 = 240)
-    bne update_cell_loop
-
+    beq :+
+    jmp update_cell_loop
+:
     rts
 
 ; ============================================================
-; render_cells - Render all active cells to OAM buffer
+; render_entities - Render all active cells and nutrients
 ; ============================================================
-render_cells:
+render_entities:
     ; Clear OAM buffer first
     ldx #0
     lda #$FF
@@ -366,6 +410,258 @@ skip_render_cell:
     cpx #240
     bne render_cell_loop
 
+    ; Now render nutrients
+    ldx #0          ; Nutrient index
+
+render_nutrient_loop:
+    ; Check if nutrient is active
+    lda $0480,x     ; NUTRIENT_DATA base
+    beq skip_render_nutrient
+
+    ; Render nutrient as a sprite
+    lda $0482,x     ; Y position
+    sta $0200,y
+    iny
+
+    lda #$10        ; Tile index (nutrient sprite)
+    sta $0200,y
+    iny
+
+    lda #$02        ; Attributes (palette 2 = green)
+    sta $0200,y
+    iny
+
+    lda $0481,x     ; X position
+    sta $0200,y
+    iny
+
+skip_render_nutrient:
+    ; Move to next nutrient
+    txa
+    clc
+    adc #16
+    tax
+    cpx #128        ; 8 nutrients * 16 bytes
+    bne render_nutrient_loop
+
+    rts
+
+; ============================================================
+; update_nutrients - Update nutrient animations
+; ============================================================
+update_nutrients:
+    ; For now, nutrients are static
+    ; TODO: Add animation frames later
+    rts
+
+; ============================================================
+; spawn_nutrient - Spawn a new nutrient at random position
+; ============================================================
+spawn_nutrient:
+    ; Find first inactive nutrient slot
+    ldx #0
+find_nutrient_slot:
+    lda $0480,x     ; Check active flag
+    beq found_nutrient_slot
+    txa
+    clc
+    adc #16
+    tax
+    cpx #128
+    bne find_nutrient_slot
+    rts             ; No free slots
+
+found_nutrient_slot:
+    ; Activate nutrient
+    lda #1
+    sta $0480,x     ; Active flag
+
+    ; Generate random X position (16-240)
+    jsr random
+    and #$7F        ; 0-127
+    clc
+    adc #56         ; 56-183
+    sta $0481,x     ; X position
+
+    ; Generate random Y position (32-224)
+    jsr random
+    and #$7F        ; 0-127
+    clc
+    adc #48         ; 48-175
+    sta $0482,x     ; Y position
+
+    ; Set animation frame
+    lda #0
+    sta $0483,x
+
+    ; Increment nutrient count
+    inc nutrient_count
+
+    rts
+
+; ============================================================
+; random - Generate pseudo-random number (LCG)
+; Returns: A = random byte
+; ============================================================
+random:
+    ; Linear congruential generator
+    ; seed = (seed * 75 + 74) % 65537
+    lda rng_seed
+    asl a
+    asl a           ; * 4
+    clc
+    adc rng_seed    ; * 5
+    asl a
+    asl a
+    asl a           ; * 40
+    clc
+    adc rng_seed    ; * 41
+    clc
+    adc rng_seed+1  ; Mix in high byte
+    adc #74         ; Add constant
+    sta rng_seed
+    eor rng_seed+1
+    sta rng_seed+1
+    rts
+
+; ============================================================
+; check_collisions - Check cell vs nutrient collisions
+; ============================================================
+check_collisions:
+    ; For each active cell
+    ldx #0
+
+check_cell_loop:
+    lda cell_data,x
+    beq next_cell_collision
+
+    ; Check against each nutrient
+    ldy #0
+
+check_nutrient_loop:
+    lda $0480,y     ; Check if nutrient is active
+    beq next_nutrient
+
+    ; Simple AABB collision (8x8 boxes)
+    ; Check X overlap
+    lda cell_data+1,x   ; Cell X
+    sec
+    sbc $0481,y         ; Nutrient X
+    bpl :+
+    eor #$FF
+    clc
+    adc #1
+:   cmp #12             ; Collision threshold
+    bcs next_nutrient   ; No collision
+
+    ; Check Y overlap
+    lda cell_data+2,x   ; Cell Y
+    sec
+    sbc $0482,y         ; Nutrient Y
+    bpl :+
+    eor #$FF
+    clc
+    adc #1
+:   cmp #12             ; Collision threshold
+    bcs next_nutrient   ; No collision
+
+    ; COLLISION! Collect nutrient
+    jsr collect_nutrient
+
+next_nutrient:
+    tya
+    clc
+    adc #16
+    tay
+    cpy #128
+    bne check_nutrient_loop
+
+next_cell_collision:
+    txa
+    clc
+    adc #16
+    tax
+    cpx #240
+    bne check_cell_loop
+
+    rts
+
+; ============================================================
+; collect_nutrient - Handle nutrient collection
+; Input: X = cell index, Y = nutrient index
+; ============================================================
+collect_nutrient:
+    ; Deactivate nutrient
+    lda #0
+    sta $0480,y
+
+    ; Decrement nutrient count
+    dec nutrient_count
+
+    ; Increment score (TODO: BCD math)
+    inc score_lo
+
+    ; Trigger mitosis if cell count < max
+    lda cell_count
+    cmp #MAX_CELLS
+    bcs :+
+    jsr trigger_mitosis
+:
+
+    ; Spawn a new nutrient to replace collected one
+    jsr spawn_nutrient
+
+    rts
+
+; ============================================================
+; trigger_mitosis - Divide cell (create a copy)
+; Input: X = cell index to divide
+; ============================================================
+trigger_mitosis:
+    ; Find first inactive cell slot
+    stx temp        ; Save current cell index
+    ldx #0
+
+find_cell_slot:
+    lda cell_data,x
+    beq found_cell_slot
+    txa
+    clc
+    adc #16
+    tax
+    cpx #240
+    bne find_cell_slot
+    ldx temp
+    rts             ; No free slots
+
+found_cell_slot:
+    ; Copy parent cell data to new cell
+    ldy temp        ; Parent cell index
+    lda cell_data+1,y   ; Parent X
+    sta cell_data+1,x
+    lda cell_data+2,y   ; Parent Y
+    sta cell_data+2,x
+    lda cell_data+3,y   ; Parent VX
+    sta cell_data+3,x
+    lda cell_data+4,y   ; Parent VY
+    sta cell_data+4,x
+    lda cell_data+5,y   ; Parent size
+    sta cell_data+5,x
+
+    ; Activate new cell
+    lda #1
+    sta cell_data,x
+
+    ; Offset position slightly
+    lda cell_data+1,x
+    clc
+    adc #8
+    sta cell_data+1,x
+
+    ; Increment cell count
+    inc cell_count
+
+    ldx temp        ; Restore cell index
     rts
 
 ; ============================================================
