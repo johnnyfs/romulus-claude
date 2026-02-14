@@ -1,0 +1,160 @@
+================================================================================
+MITOSIS PANIC - VALIDATION QUICK START
+================================================================================
+
+⚡ 3 COMMANDS TO TEST ⚡
+
+1. BUILD ROM:
+   cd romulus-claude
+   git checkout feature/phase5-audio
+   make clean && make
+
+2. RUN ROM:
+   fceux build/mitosis_panic.nes
+
+3. LOAD TEST SCRIPTS (in FCEUX):
+   Tools > Lua > New Lua Script Window
+   → Load: fceux_test_gameplay.lua
+   → Load: audio/testing/fceux_audio_validation.lua
+   → Load: fceux_validate_graphics.lua
+
+================================================================================
+
+✅ WHAT GOOD LOOKS LIKE
+
+SCREEN (HUD):
+  Nutrients: 3 (actual: 3)          ← Should be 3!
+  Antibodies: 2 (actual: 2)         ← Should be 2!
+  Antibody Movement: 2 moving       ← Should say "moving"!
+
+CONSOLE (Help > Message Log):
+  [INFO] Nutrients spawned correctly: 3
+  [INFO] Music started
+  NO [CRITICAL] or [ERROR] messages  ← This is key!
+
+VISUAL:
+  ✅ 3 green sprites (nutrients)
+  ✅ 2 red sprites MOVING (enemies)
+  ✅ 1 blue sprite (player)
+
+AUDIO:
+  ✅ Music playing
+  ✅ Beep on collecting green dots
+
+================================================================================
+
+❌ WHAT BAD LOOKS LIKE
+
+CONSOLE:
+  [CRITICAL] BUG-002: No nutrients spawned    ← RED FLAG!
+  [CRITICAL] BUG-003: All antibodies static   ← RED FLAG!
+  [ERROR] Anything                             ← RED FLAG!
+
+HUD:
+  Nutrients: 0 (actual: 0)          ← Should be 3!
+  Antibody Movement: 0 moving       ← Should be moving!
+
+VISUAL:
+  ❌ No green sprites
+  ❌ Red sprites frozen/flickering
+
+================================================================================
+
+⚡ 30-SECOND TEST ⚡
+
+1. Load ROM + scripts (see above)
+2. Wait 5 seconds
+3. Check console - if it says [CRITICAL], FAIL!
+4. Check HUD - if Nutrients=0, FAIL!
+5. Watch enemies - if not moving, FAIL!
+6. If all checks pass → GOOD! Do full testing.
+
+================================================================================
+
+📊 PASS/FAIL CRITERIA
+
+PASS:
+  ✅ Console shows [INFO] only
+  ✅ HUD shows Nutrients=3, 2 moving antibodies
+  ✅ Visual: Green + red sprites visible and moving
+  ✅ Audio: Music + SFX playing
+
+FAIL:
+  ❌ Console shows [CRITICAL] or [ERROR]
+  ❌ HUD shows Nutrients=0 or 0 moving
+  ❌ Visual: No nutrients or frozen enemies
+  ❌ Audio: Silent
+
+================================================================================
+
+📁 FILES YOU NEED
+
+MUST READ:
+  - OPERATOR_VALIDATION_GUIDE.md (full instructions)
+  - VALIDATION_REPORT_TEMPLATE.md (report your results)
+
+REFERENCE:
+  - KNOWN_ISSUES.md (what to expect)
+  - FCEUX_TESTING_GUIDE.md (detailed guide)
+
+SCRIPTS (auto-load these):
+  - fceux_test_gameplay.lua
+  - audio/testing/fceux_audio_validation.lua
+  - fceux_validate_graphics.lua
+
+================================================================================
+
+🆘 QUICK TROUBLESHOOTING
+
+"ROM won't build"
+  → git checkout feature/phase5-audio
+  → make clean && make
+
+"Scripts won't load"
+  → Check you're in romulus-claude directory
+  → Restart FCEUX
+
+"Console empty"
+  → Help > Message Log
+  → Play game for 30 seconds
+
+"Not sure if passed"
+  → Look for [CRITICAL] in console = FAIL
+  → Look for "0 moving" in HUD = FAIL
+  → If you see green dots on screen = likely PASS
+
+================================================================================
+
+⏱️ TIME ESTIMATE
+
+Quick test (this file): 30 seconds
+Full validation: 10-15 minutes
+Report writing: 5 minutes
+
+Total: ~20 minutes
+
+================================================================================
+
+📞 REPORT RESULTS TO
+
+Game Designer + QA Engineer (Claude)
+
+Use template: VALIDATION_REPORT_TEMPLATE.md
+
+================================================================================
+
+🎯 BOTTOM LINE
+
+If console shows [CRITICAL] → FAIL
+If HUD shows "0 moving" → FAIL
+If no green sprites visible → FAIL
+If all clear → Do full testing!
+
+================================================================================
+
+Created: 2024-02-14
+Status: Ready for use
+Branch: feature/phase5-audio
+Expected ROM Size: 40KB
+
+GOOD LUCK! 🎮
