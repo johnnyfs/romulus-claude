@@ -1,6 +1,8 @@
 ; MITOSIS PANIC - Main Entry Point
-; Hello World ROM - Phase 1
+; Phase 2: Controller Input & Entity System
 ; Assembles with ca65 (cc65 toolchain)
+
+.include "constants.inc"
 
 .segment "HEADER"
     .byte "NES", $1A    ; iNES header identifier
@@ -14,13 +16,32 @@
     .addr nmi_handler, reset_handler, irq_handler
 
 .segment "ZEROPAGE"
-    frame_count: .res 1
-    sprite_x:    .res 1
-    sprite_y:    .res 1
+    frame_count:  .res 1
+    controller1:  .res 1      ; Current controller state
+    controller1_prev: .res 1  ; Previous frame controller state
+    temp:         .res 1      ; Temporary variable
+    temp2:        .res 1      ; Temporary variable 2
 
 .segment "BSS"
-    ; OAM shadow buffer (sprites)
-    oam_buffer: .res 256
+    ; OAM shadow buffer (sprites) at $0200
+    ; Cell entity data at $0300 (per TECHNICAL_SPEC.md)
+    ; Each cell is 16 bytes:
+    ;   +$00: Active flag (0=inactive, 1=active)
+    ;   +$01: X position
+    ;   +$02: Y position
+    ;   +$03: X velocity (signed)
+    ;   +$04: Y velocity (signed)
+    ;   +$05: Size (radius)
+    ;   +$06: Animation frame
+    ;   +$07: State flags
+    ;   +$08-$0F: Reserved
+    cell_data = $0300
+
+    ; Game state variables at $0500
+    game_state = $0500
+    cell_count = $0501  ; Number of active cells
+    score_lo = $0502
+    score_hi = $0503
 
 .segment "CODE"
 
@@ -59,13 +80,10 @@ reset_handler:
     ; Load palettes
     jsr load_palettes
 
-    ; Initialize sprite position (center of screen)
-    lda #120
-    sta sprite_x
-    lda #112
-    sta sprite_y
+    ; Initialize game state
+    jsr init_game_state
 
-    ; Set up one test sprite
+    ; Set up sprites
     jsr init_sprites
 
     ; Enable rendering
@@ -98,22 +116,10 @@ nmi_handler:
     ; Increment frame counter
     inc frame_count
 
-    ; Simple animation: move sprite right slowly
-    lda frame_count
-    and #$03        ; Only every 4 frames
-    bne :+
-    inc sprite_x    ; Move right
-:
-
-    ; Update sprite position in OAM buffer
-    lda sprite_y
-    sta $0200       ; Y position
-    lda #$01        ; Tile index (will be a cell sprite)
-    sta $0201
-    lda #$00        ; Attributes (palette 0)
-    sta $0202
-    lda sprite_x
-    sta $0203       ; X position
+    ; Game logic during VBlank
+    jsr read_controller
+    jsr update_cells
+    jsr render_cells
 
     ; Restore registers
     pla
@@ -171,8 +177,195 @@ init_sprites:
     inx
     cpx #0          ; Loop 64 times (256 bytes / 4 bytes per sprite)
     bne :-
+    rts
 
-    ; Sprite 0 will be set by NMI handler
+; ============================================================
+; init_game_state - Initialize game entities
+; ============================================================
+init_game_state:
+    ; Initialize first cell (player starts with 1 cell)
+    lda #1
+    sta cell_count
+
+    ; Cell 0: Active at center of screen
+    lda #1          ; Active flag
+    sta cell_data+0
+    lda #120        ; X position (center)
+    sta cell_data+1
+    lda #112        ; Y position (center)
+    sta cell_data+2
+    lda #0          ; X velocity
+    sta cell_data+3
+    lda #0          ; Y velocity
+    sta cell_data+4
+    lda #8          ; Size (radius = 8 pixels)
+    sta cell_data+5
+    lda #0          ; Animation frame
+    sta cell_data+6
+    lda #0          ; State flags
+    sta cell_data+7
+
+    ; Clear remaining cells (make inactive)
+    ldx #16         ; Start at cell 1
+:   lda #0
+    sta cell_data,x
+    inx
+    cpx #240        ; 15 more cells * 16 bytes = 240
+    bne :-
+
+    rts
+
+; ============================================================
+; read_controller - Read NES controller 1
+; ============================================================
+read_controller:
+    ; Save previous state
+    lda controller1
+    sta controller1_prev
+
+    ; Strobe controller
+    lda #1
+    sta $4016
+    lda #0
+    sta $4016
+
+    ; Read 8 buttons (A, B, Select, Start, Up, Down, Left, Right)
+    ldx #8
+:   lda $4016
+    lsr a           ; Bit 0 -> Carry
+    rol controller1 ; Carry -> controller1
+    dex
+    bne :-
+
+    rts
+
+; ============================================================
+; update_cells - Update all active cell positions
+; ============================================================
+update_cells:
+    ; For each active cell, apply controller input
+    ldx #0          ; Cell index (0-15)
+
+update_cell_loop:
+    ; Check if cell is active
+    lda cell_data,x
+    beq next_cell   ; Skip if inactive
+
+    ; Apply controller input to velocity
+    ; D-Pad mapping: bit 7=A, 6=B, 5=Select, 4=Start, 3=Up, 2=Down, 1=Left, 0=Right
+
+    ; Check Right
+    lda controller1
+    and #$01
+    beq :+
+    inc cell_data+3,x   ; Increase X velocity
+:
+    ; Check Left
+    lda controller1
+    and #$02
+    beq :+
+    dec cell_data+3,x   ; Decrease X velocity
+:
+    ; Check Down
+    lda controller1
+    and #$04
+    beq :+
+    inc cell_data+4,x   ; Increase Y velocity
+:
+    ; Check Up
+    lda controller1
+    and #$08
+    beq :+
+    dec cell_data+4,x   ; Decrease Y velocity
+:
+
+    ; Apply velocity to position
+    lda cell_data+1,x   ; X position
+    clc
+    adc cell_data+3,x   ; Add X velocity
+    sta cell_data+1,x
+
+    lda cell_data+2,x   ; Y position
+    clc
+    adc cell_data+4,x   ; Add Y velocity
+    sta cell_data+2,x
+
+    ; Apply friction (slow down velocity)
+    lda cell_data+3,x
+    beq :+              ; Skip if velocity is 0
+    bmi neg_x_vel       ; Handle negative velocity
+    dec cell_data+3,x   ; Decrease positive velocity
+    jmp :+
+neg_x_vel:
+    inc cell_data+3,x   ; Increase negative velocity (toward 0)
+:
+
+    lda cell_data+4,x
+    beq :+              ; Skip if velocity is 0
+    bmi neg_y_vel       ; Handle negative velocity
+    dec cell_data+4,x   ; Decrease positive velocity
+    jmp :+
+neg_y_vel:
+    inc cell_data+4,x   ; Increase negative velocity (toward 0)
+:
+
+next_cell:
+    ; Move to next cell (16 bytes per cell)
+    txa
+    clc
+    adc #16
+    tax
+    cpx #240        ; Check all 15 cells (16 * 15 = 240)
+    bne update_cell_loop
+
+    rts
+
+; ============================================================
+; render_cells - Render all active cells to OAM buffer
+; ============================================================
+render_cells:
+    ; Clear OAM buffer first
+    ldx #0
+    lda #$FF
+:   sta $0200,x
+    inx
+    bne :-
+
+    ; Render each active cell as a sprite
+    ldx #0          ; Cell index
+    ldy #0          ; OAM buffer index
+
+render_cell_loop:
+    ; Check if cell is active
+    lda cell_data,x
+    beq skip_render_cell
+
+    ; Render cell as a single sprite (will be 2x2 metatile later)
+    lda cell_data+2,x   ; Y position
+    sta $0200,y
+    iny
+
+    lda #$01            ; Tile index (cell sprite)
+    sta $0200,y
+    iny
+
+    lda #$00            ; Attributes (palette 0 = cyan)
+    sta $0200,y
+    iny
+
+    lda cell_data+1,x   ; X position
+    sta $0200,y
+    iny
+
+skip_render_cell:
+    ; Move to next cell
+    txa
+    clc
+    adc #16
+    tax
+    cpx #240
+    bne render_cell_loop
+
     rts
 
 ; ============================================================
