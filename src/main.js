@@ -120,10 +120,11 @@ const Game = {
         Grid.draw();
         Enemies.draw();
         Player.draw();
-        Encircle.draw(); // Draw flash effects on top
+        Encircle.draw();
         HUD.draw();
         if (this.state === STATE_PAUSED) {
-          Renderer.drawText('PAUSED', 100, 128, PALETTE.WHITE, 8);
+          // "PAUSED" = 6 chars * 8 = 48px, center = (256-48)/2 = 104
+          Renderer.drawText('PAUSED', 104, 116, PALETTE.WHITE);
         }
         break;
 
@@ -131,40 +132,46 @@ const Game = {
         Grid.draw();
         Player.draw();
         HUD.draw();
-        Renderer.drawText('WAVE ' + Waves.current + ' CLEAR!', 76, 120, PALETTE.GREEN, 8);
+        Renderer.drawText('WAVE ' + Waves.current, 88, 108, PALETTE.GREEN);
+        Renderer.drawText('CLEAR!', 104, 120, PALETTE.GREEN_LIGHT);
         break;
 
       case STATE_DYING:
         Grid.draw();
         Enemies.draw();
         HUD.draw();
-        // Show death sprite instead of flashing
         const deathPos = Player.getPixelPos();
         Renderer.drawSprite(Sprites.maripoga_death, deathPos.x, deathPos.y);
         break;
 
       case STATE_GAME_OVER:
-        Renderer.drawText('GAME OVER', 88, 110, PALETTE.RED, 8);
-        Renderer.drawText('SCORE: ' + Player.score, 88, 130, PALETTE.WHITE, 8);
+        // "GAME OVER" = 9*8 = 72px, center = 92
+        Renderer.drawText('GAME OVER', 92, 80, PALETTE.RED);
+        Renderer.drawText('SCORE', 104, 100, PALETTE.WHITE);
+        Renderer.drawText(String(Player.score), 128 - String(Player.score).length * 4, 112, PALETTE.SCORE_COLOR);
         if (this.highScore > 0) {
-          Renderer.drawText('HIGH: ' + this.highScore, 88, 145, PALETTE.GREEN, 8);
+          Renderer.drawText('BEST', 112, 130, PALETTE.GREEN);
+          Renderer.drawText(String(this.highScore), 128 - String(this.highScore).length * 4, 142, PALETTE.GREEN_LIGHT);
         }
-        Renderer.drawText('PRESS ENTER', 80, 170, PALETTE.HUD_TEXT, 8);
+        Renderer.drawText('PRESS ENTER', 84, 172, PALETTE.HUD_TEXT);
         break;
     }
   },
 
   _drawTitle() {
-    // Title screen
-    Renderer.drawText("MARIPOGA'S", 72, 60, PALETTE.GREEN, 8);
-    Renderer.drawText('ERRAND', 96, 80, PALETTE.GREEN_LIGHT, 8);
+    // Title screen — "MARIPOGA'S" = 10*8 = 80px, center = 88
+    Renderer.drawText("MARIPOGA'S", 88, 56, PALETTE.GREEN);
+    // "ERRAND" = 6*8 = 48px, center = 104
+    Renderer.drawText('ERRAND', 104, 72, PALETTE.GREEN_LIGHT);
 
     // Draw Maripoga in the center
     const sprite = Sprites.getSprite('player', false);
-    Renderer.drawSprite(sprite, 120, 110);
+    Renderer.drawSprite(sprite, 120, 100);
 
-    Renderer.drawText('PRESS ENTER TO START', 48, 170, PALETTE.HUD_TEXT, 8);
-    Renderer.drawText('ARROWS: HOP  Z: POWER HOP', 28, 200, PALETTE.NEUTRAL, 8);
+    // "PRESS ENTER" = 11*8 = 88px, center = 84
+    Renderer.drawText('PRESS ENTER', 84, 160, PALETTE.HUD_TEXT);
+    // "ARROWS TO HOP" = 13*8 = 104, center = 76
+    Renderer.drawText('ARROWS TO HOP', 76, 180, PALETTE.NEUTRAL);
   },
 
   // Main loop

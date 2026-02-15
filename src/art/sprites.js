@@ -288,17 +288,7 @@ const Sprites = {
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
     ];
 
-    // Apply outlines to all sprites
-    this.maripoga_idle = this.addOutline(this.maripoga_idle);
-    this.maripoga_hop = this.addOutline(this.maripoga_hop);
-    this.maripoga_death = this.addOutline(this.maripoga_death);
-    this.red_frog_idle = this.addOutline(this.red_frog_idle);
-    this.red_frog_hop = this.addOutline(this.red_frog_hop);
-    this.purple_frog_idle = this.addOutline(this.purple_frog_idle);
-    this.purple_frog_hop = this.addOutline(this.purple_frog_hop);
-    this.blue_frog_idle = this.addOutline(this.blue_frog_idle);
-    this.blue_frog_hop = this.addOutline(this.blue_frog_hop);
-    this.snail = this.addOutline(this.snail);
+    // No outlines — clean solid sprites for authentic NES look
   },
 
   // Get the right sprite for an entity
