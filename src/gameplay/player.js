@@ -57,6 +57,13 @@ const Player = {
           this.die();
           return;
         }
+        // Zombie tiles: first hop reverts to neutral, second hop claims green
+        if (landedTile === TILE_ZOMBIE) {
+          Grid.set(this.col, this.row, TILE_NEUTRAL);
+          Audio.sfxClaim(true); // Use enemy claim sound for distinct feedback
+          Encircle.checkAll();
+          return;
+        }
         // Claim tile on landing
         const oldTile = landedTile;
         Grid.set(this.col, this.row, TILE_GREEN);
@@ -80,8 +87,8 @@ const Player = {
       if (Grid.inBounds(newCol, newRow)) {
         const tile = Grid.get(newCol, newRow);
         // Spike tiles are deadly — can hop onto them but die on landing
-        // Water and zombie tiles block movement entirely
-        if (tile !== TILE_WATER && tile !== TILE_ZOMBIE) {
+        // Water tiles block movement; zombie tiles allow entry (cleared on landing)
+        if (tile !== TILE_WATER) {
           this.hopFromCol = this.col;
           this.hopFromRow = this.row;
           this.col = newCol;
