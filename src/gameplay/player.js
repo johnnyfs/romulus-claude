@@ -97,11 +97,11 @@ const Player = {
   // Get pixel position (interpolated during hop)
   getPixelPos() {
     const targetX = this.col * TILE_SIZE;
-    const targetY = (this.row + 1) * TILE_SIZE; // +1 for HUD offset
+    const targetY = (this.row + GRID_OFFSET_Y) * TILE_SIZE; // + GRID_OFFSET_Y for grid offset
     if (this.isHopping) {
       const t = 1 - (this.hopTimer / HOP_DURATION);
       const fromX = this.hopFromCol * TILE_SIZE;
-      const fromY = (this.hopFromRow + 1) * TILE_SIZE;
+      const fromY = (this.hopFromRow + GRID_OFFSET_Y) * TILE_SIZE;
       // Arc: lerp position with a vertical bounce
       const x = fromX + (targetX - fromX) * t;
       const baseY = fromY + (targetY - fromY) * t;
