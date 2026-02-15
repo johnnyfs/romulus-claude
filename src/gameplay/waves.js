@@ -1,11 +1,38 @@
-// Wave system - escalating difficulty
+// Wave system - escalating difficulty with structured progression
 const Waves = {
   current: 1,
-  targetPercent: 0.70,
+  targetPercent: 0.65,
   timer: 0,
   waveStartTime: 0,
   hurryUpPlayed: false,
   snailsSpawned: 0,
+
+  // Explicit wave table: each entry lists enemy counts by type.
+  // Every wave is harder than the last (more enemies, new types, or higher fill%).
+  // Enemy types: red, purple, blue, zombie, ladybug, snake, smart
+  // Zombie waves (every 5th) are handled separately.
+  _waveTable: {
+    1:  { red: 1 },
+    2:  { red: 1 },
+    3:  { red: 2 },
+    4:  { red: 2, ladybug: 1 },
+    // Wave 5: zombie wave
+    6:  { red: 2, purple: 1 },
+    7:  { red: 2, purple: 1, ladybug: 1 },
+    8:  { red: 3, purple: 1 },
+    9:  { red: 2, purple: 1, blue: 1 },
+    // Wave 10: zombie wave
+    11: { red: 2, purple: 1, blue: 1, snake: 1 },
+    12: { red: 3, purple: 1, blue: 1, snake: 1 },
+    13: { red: 3, purple: 2, blue: 1, ladybug: 1 },
+    14: { red: 3, purple: 2, blue: 1, snake: 1, smart: 1 },
+    // Wave 15: zombie wave
+    16: { red: 3, purple: 2, blue: 2, snake: 1, smart: 1 },
+    17: { red: 4, purple: 2, blue: 2, snake: 1, ladybug: 1 },
+    18: { red: 4, purple: 2, blue: 2, snake: 2, smart: 1 },
+    19: { red: 4, purple: 3, blue: 2, snake: 2, smart: 1, ladybug: 1 },
+    // Wave 20: zombie wave
+  },
 
   init() {
     this.current = 1;
@@ -43,73 +70,156 @@ const Waves = {
     this.snailsSpawned = 0;
 
     const wave = this.current;
-    this.targetPercent = wave <= 2 ? 0.70 : wave <= 8 ? 0.75 : wave <= 14 ? 0.80 : 0.85;
 
-    // Wave progression:
-    // 1-2: 1 red (tutorial)
-    // 3-4: 2 reds
-    // 5-6: 1 red + 1 purple (chaser intro)
-    // 7-8: 2 red + 1 purple
-    // 9-10: 1 red + 1 purple + 1 blue (teleporter intro)
-    // 11: ZOMBIE WAVE! 2 zombies only (Q*bert style special wave)
-    // 12-13: 1 red + 1 purple + 1 blue + 1 zombie (mix)
-    // 14: ZOMBIE WAVE! 4 zombies
-    // 15+: escalating mix with periodic zombie waves every 5th wave
+    // Fill percentage progression - gradual increase
+    if (wave <= 3) this.targetPercent = 0.65;
+    else if (wave <= 6) this.targetPercent = 0.70;
+    else if (wave <= 9) this.targetPercent = 0.75;
+    else if (wave <= 12) this.targetPercent = 0.78;
+    else if (wave <= 15) this.targetPercent = 0.80;
+    else if (wave <= 18) this.targetPercent = 0.82;
+    else this.targetPercent = 0.85;
 
-    const isZombieWave = (wave === 11 || wave === 14 || (wave > 14 && (wave - 14) % 5 === 0));
+    // Zombie waves every 5th wave
+    const isZombieWave = (wave % 5 === 0);
 
     if (isZombieWave) {
-      // Special zombie-only wave!
-      const numZombies = wave === 11 ? 2 : wave === 14 ? 4 : Math.min(6, 2 + Math.floor((wave - 14) / 5));
-      const positions = [[2,2],[GRID_COLS-3,2],[2,GRID_ROWS-3],[GRID_COLS-3,GRID_ROWS-3],[4,6],[GRID_COLS-5,6]];
-      for (let i = 0; i < numZombies && i < positions.length; i++) {
-        const [c,r] = positions[i];
-        if (this.isSafeSpawnPosition(c, r)) {
-          Enemies.spawn('zombie', c, r);
-        } else {
-          Enemies.spawn('zombie', c + 1, r + 1);
-        }
-      }
-    } else if (wave <= 2) {
-      Enemies.spawn('red', 2, 2);
-    } else if (wave <= 4) {
-      Enemies.spawn('red', 2, 2);
-      Enemies.spawn('red', GRID_COLS - 3, GRID_ROWS - 3);
-    } else if (wave <= 6) {
-      Enemies.spawn('red', 2, 2);
-      Enemies.spawn('purple', GRID_COLS - 3, GRID_ROWS - 3);
-    } else if (wave <= 8) {
-      Enemies.spawn('red', 2, 2);
-      Enemies.spawn('red', GRID_COLS - 3, 2);
-      Enemies.spawn('purple', GRID_COLS - 3, GRID_ROWS - 3);
-    } else if (wave <= 10) {
-      Enemies.spawn('red', 2, 2);
-      Enemies.spawn('purple', GRID_COLS - 3, GRID_ROWS - 3);
-      Enemies.spawn('blue', 2, GRID_ROWS - 3);
+      this._spawnZombieWave(wave);
     } else {
-      // 12+ (non-zombie): escalating mix
-      const numRed = Math.min(3, 1 + Math.floor((wave - 12) / 3));
-      const numPurple = Math.min(2, 1 + Math.floor((wave - 12) / 4));
-      const numBlue = 1;
-      const numZombie = Math.min(2, Math.floor((wave - 12) / 3));
-      for (let i = 0; i < numRed; i++) {
-        Enemies.spawn('red', 1 + i * 4, 1 + i * 2);
+      this._spawnWaveEnemies(wave);
+    }
+
+    // Speed scaling: starting wave 5, reduce moveInterval by 20ms per wave
+    // Minimum moveInterval: 250ms
+    if (wave > 4) {
+      for (const enemy of Enemies.list) {
+        enemy.moveInterval = Math.max(250, enemy.moveInterval - (wave - 4) * 20);
       }
-      for (let i = 0; i < numPurple; i++) {
-        Enemies.spawn('purple', GRID_COLS - 2 - i * 4, GRID_ROWS - 2 - i * 2);
+    }
+  },
+
+  // Spawn zombie-only wave. Zombie count = wave / 5, capped at 6.
+  _spawnZombieWave(wave) {
+    const numZombies = Math.min(6, Math.ceil(wave / 5));
+    const positions = [
+      [2, 2],
+      [GRID_COLS - 3, 2],
+      [2, GRID_ROWS - 3],
+      [GRID_COLS - 3, GRID_ROWS - 3],
+      [4, 6],
+      [GRID_COLS - 5, 6],
+    ];
+    for (let i = 0; i < numZombies && i < positions.length; i++) {
+      const [c, r] = positions[i];
+      if (this.isSafeSpawnPosition(c, r)) {
+        Enemies.spawn('zombie', c, r);
+      } else {
+        Enemies.spawn('zombie', c + 1, r + 1);
       }
-      Enemies.spawn('blue', Math.floor(GRID_COLS / 2), 1);
-      for (let i = 0; i < numZombie; i++) {
-        Enemies.spawn('zombie', 2 + i * 6, Math.floor(GRID_ROWS / 2));
+    }
+  },
+
+  // Spawn enemies for a normal (non-zombie) wave.
+  // Uses explicit wave table for waves 1-19, formula for 20+.
+  _spawnWaveEnemies(wave) {
+    const config = this._waveTable[wave] || this._generateWaveConfig(wave);
+    const enemyList = [];
+
+    // Build flat list of enemy types to spawn
+    for (const [type, count] of Object.entries(config)) {
+      for (let i = 0; i < count; i++) {
+        enemyList.push(type);
       }
     }
 
-    // Speed up enemies in later waves
-    if (wave > 4) {
-      for (const enemy of Enemies.list) {
-        enemy.moveInterval = Math.max(300, enemy.moveInterval - (wave - 4) * 30);
+    // Get spawn positions and spawn enemies
+    const positions = this._getSpawnPositions(enemyList.length);
+    for (let i = 0; i < enemyList.length; i++) {
+      const [c, r] = positions[i];
+      Enemies.spawn(enemyList[i], c, r);
+    }
+  },
+
+  // Generate wave config for waves beyond the explicit table.
+  // Each enemy type scales gradually. Every wave adds at least one
+  // unit of difficulty compared to the previous non-zombie wave.
+  _generateWaveConfig(wave) {
+    // Find the effective wave index (skip zombie waves for scaling)
+    // Count of non-zombie waves up to this point determines scaling
+    const nonZombieWave = wave - Math.floor(wave / 5);
+
+    // Base counts scale with non-zombie wave number
+    const red = Math.min(6, 3 + Math.floor((nonZombieWave - 15) / 3));
+    const purple = Math.min(4, 2 + Math.floor((nonZombieWave - 15) / 4));
+    const blue = Math.min(3, 2 + Math.floor((nonZombieWave - 17) / 4));
+    const snake = Math.min(3, 1 + Math.floor((nonZombieWave - 15) / 5));
+    const smart = Math.min(3, 1 + Math.floor((nonZombieWave - 16) / 5));
+    const ladybug = Math.min(2, 1 + Math.floor((nonZombieWave - 17) / 6));
+
+    const config = {};
+    if (red > 0) config.red = red;
+    if (purple > 0) config.purple = purple;
+    if (blue > 0) config.blue = blue;
+    if (snake > 0) config.snake = snake;
+    if (smart > 0) config.smart = smart;
+    if (ladybug > 0) config.ladybug = ladybug;
+
+    return config;
+  },
+
+  // Get spread-out spawn positions for enemies.
+  // Uses corner and edge positions, avoiding player start (center).
+  _getSpawnPositions(count) {
+    const positions = [
+      [2, 2],
+      [GRID_COLS - 3, 2],
+      [2, GRID_ROWS - 3],
+      [GRID_COLS - 3, GRID_ROWS - 3],
+      [Math.floor(GRID_COLS / 2), 1],
+      [Math.floor(GRID_COLS / 2), GRID_ROWS - 2],
+      [1, Math.floor(GRID_ROWS / 2)],
+      [GRID_COLS - 2, Math.floor(GRID_ROWS / 2)],
+      [4, 3],
+      [GRID_COLS - 5, 3],
+      [4, GRID_ROWS - 4],
+      [GRID_COLS - 5, GRID_ROWS - 4],
+      [3, 1],
+      [GRID_COLS - 4, 1],
+      [3, GRID_ROWS - 2],
+      [GRID_COLS - 4, GRID_ROWS - 2],
+    ];
+
+    const result = [];
+    const used = new Set();
+
+    for (let i = 0; i < count; i++) {
+      if (i < positions.length) {
+        const [c, r] = positions[i];
+        if (this.isSafeSpawnPosition(c, r) && !used.has(`${c},${r}`)) {
+          result.push([c, r]);
+          used.add(`${c},${r}`);
+        } else {
+          // Nudge to avoid conflicts
+          const nc = c + 1;
+          const nr = r + 1;
+          result.push([nc, nr]);
+          used.add(`${nc},${nr}`);
+        }
+      } else {
+        // Overflow: generate additional positions along edges
+        const c = 1 + (i % (GRID_COLS - 2));
+        const r = (i % 2 === 0) ? 1 : GRID_ROWS - 2;
+        if (this.isSafeSpawnPosition(c, r) && !used.has(`${c},${r}`)) {
+          result.push([c, r]);
+          used.add(`${c},${r}`);
+        } else {
+          result.push([c + 1, r]);
+          used.add(`${c + 1},${r}`);
+        }
       }
     }
+
+    return result;
   },
 
   // Update wave timer and spawn snails
