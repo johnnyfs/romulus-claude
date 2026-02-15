@@ -34,6 +34,10 @@ const Waves = {
     Enemies.init();
     Grid.init();
     Player.reset();
+    // Reset bonus items and powerups between waves
+    if (typeof Bonuses !== 'undefined') {
+      Bonuses.init();
+    }
     this.waveStartTime = performance.now();
     this.hurryUpPlayed = false;
     this.snailsSpawned = 0;

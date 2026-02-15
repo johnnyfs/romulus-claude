@@ -57,6 +57,14 @@ const PALETTE = {
   EYE_WHITE:   '#ffffff',
   EYE_PUPIL:   '#0f0f0f',
   ENEMY_EYE:   '#ffff00',
+
+  // Bonus item colors
+  GOLD:        '#ffd700',
+  GOLD_DARK:   '#b8860b',
+  PINK:        '#ff69b4',
+  PINK_DARK:   '#c71585',
+  CYAN:        '#00e5ff',
+  CYAN_DARK:   '#007c8a',
 };
 
 // Map tile states to colors

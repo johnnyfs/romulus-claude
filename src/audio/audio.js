@@ -428,4 +428,54 @@ const Audio = {
       this.playNote(freq * 1.5, i * 0.1 + 0.05, 0.15, 'triangle', 0.15, 0.01, 0.06);
     });
   },
+
+  // === BONUS ITEM SOUNDS ===
+
+  // General bonus pickup - short happy chirp
+  sfxBonusPickup() {
+    this.playNote(659, 0, 0.06, 'square', 0.14, 0.005, 0.025);
+    this.playNote(880, 0.05, 0.08, 'square', 0.13, 0.005, 0.03);
+    this.playNote(1047, 0.1, 0.1, 'triangle', 0.1, 0.01, 0.04);
+  },
+
+  // Speed boost whoosh - quick ascending sweep
+  sfxSpeedBoost() {
+    // Rapid ascending arpeggio with triangle whoosh
+    this.playNote(523, 0, 0.05, 'square', 0.14, 0.005, 0.02);
+    this.playNote(659, 0.04, 0.05, 'square', 0.13, 0.005, 0.02);
+    this.playNote(784, 0.08, 0.05, 'square', 0.12, 0.005, 0.02);
+    this.playNote(1047, 0.12, 0.1, 'square', 0.15, 0.005, 0.04);
+    // Whoosh overlay
+    this.playNote(262, 0, 0.2, 'triangle', 0.12, 0.01, 0.08);
+  },
+
+  // Invincibility power-up chime - majestic ascending chord
+  sfxInvincibleStart() {
+    const melody = [523, 659, 784, 880, 1047]; // C5 major ascending
+    melody.forEach((freq, i) => {
+      this.playNote(freq, i * 0.08, 0.12, 'square', 0.16, 0.005, 0.04);
+    });
+    // Power chord at the end
+    this.playNote(523, 0.35, 0.25, 'triangle', 0.14, 0.01, 0.08);
+    this.playNote(1047, 0.35, 0.25, 'square', 0.12, 0.01, 0.08);
+    this.playNote(1568, 0.35, 0.25, 'triangle', 0.08, 0.01, 0.08);
+  },
+
+  // Extra life - triumphant fanfare
+  sfxExtraLife() {
+    // Triumphant 1UP jingle
+    const melody = [523, 659, 784, 1047, 784, 1047, 1319]; // C major arpeggio up
+    const dur = 0.1;
+    melody.forEach((freq, i) => {
+      this.playNote(freq, i * dur * 0.7, dur, 'square', 0.18, 0.005, 0.04);
+      if (i >= 3) {
+        this.playNote(freq * 1.5, i * dur * 0.7 + 0.02, dur, 'triangle', 0.12, 0.01, 0.04);
+      }
+    });
+    // Big bass note for impact
+    this.playNote(131, 0, 0.6, 'triangle', 0.16, 0.02, 0.15);
+    // Sparkle finish
+    this.playNote(1568, 0.5, 0.2, 'square', 0.1, 0.01, 0.08);
+    this.playNote(2093, 0.55, 0.2, 'triangle', 0.08, 0.01, 0.08);
+  },
 };
