@@ -39,13 +39,11 @@ const Game = {
           break;
         }
 
-        // When a fill is in progress or dying enemies are playing,
-        // FREEZE all movement — only update the encircle animations
-        const animating = Encircle.pendingFill || Encircle.dyingEnemies.length > 0;
-        if (animating) {
+        // When pipeline is animating, FREEZE all movement
+        if (Encircle.isAnimating()) {
           Encircle.update(dt);
-          // Also check for wave clear after animations done
-          if (!Encircle.pendingFill && Encircle.dyingEnemies.length === 0 && Encircle.bonusPopups.length === 0 && Waves.checkWinCondition()) {
+          // After pipeline completes, check for wave clear
+          if (!Encircle.isAnimating() && Waves.checkWinCondition()) {
             this.state = STATE_WAVE_CLEAR;
             this.waveClearPhase = CLEAR_SHOW_MESSAGE;
             this.waveClearTimer = 1000;
