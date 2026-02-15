@@ -63,10 +63,10 @@ const PALETTE = {
   SMART_DARK:  '#4a4a5a',
   SMART_MID:   '#8a8a9a',
 
-  // Snake
-  SNAKE_GREEN:      '#2d8c30',
-  SNAKE_GREEN_DARK: '#1a5020',
-  SNAKE_YELLOW:     '#c8c820',
+  // Snake (orange)
+  SNAKE_BODY:       '#e87820',
+  SNAKE_BODY_DARK:  '#8a4a10',
+  SNAKE_PATTERN:    '#f5a040',
 
   // Ladybug (red-tinted snail)
   LADYBUG_RED:      '#ef4444',

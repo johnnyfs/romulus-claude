@@ -1,0 +1,3989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maripoga's Errand</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <!-- src/engine/constants.js -->
+  <script>
+// Maripoga's Errand - Core Constants
+// NES resolution: 256x240
+const SCREEN_WIDTH = 256;
+const SCREEN_HEIGHT = 240;
+const TILE_SIZE = 16;
+const GRID_COLS = 16;  // 256 / 16
+const GRID_ROWS = 12;  // 12 playable rows (top+bottom rows reserved for decoration)
+const HUD_HEIGHT = TILE_SIZE; // Top 16px for HUD
+const GRID_OFFSET_Y = 2; // Grid starts 2 tile-rows down (HUD + decoration row)
+const SCALE = 3; // CSS scale factor for the canvas
+
+// Tile states
+const TILE_NEUTRAL = 0;
+const TILE_GREEN = 1;   // Maripoga's color
+const TILE_RED = 2;     // Red frog
+const TILE_PURPLE = 3;  // Purple frog
+const TILE_BLUE = 4;    // Blue frog
+const TILE_SPIKE = 5;   // Hazard
+const TILE_WATER = 6;   // Hazard
+const TILE_SNAIL = 7;   // Snail entity
+const TILE_ZOMBIE = 8;  // Zombie frog (though they use TILE_NEUTRAL for their tiles)
+const TILE_SMART = 9;   // Smart frog
+
+// Directions
+const DIR_NONE = -1;
+const DIR_UP = 0;
+const DIR_RIGHT = 1;
+const DIR_DOWN = 2;
+const DIR_LEFT = 3;
+
+const DIR_DX = [0, 1, 0, -1];
+const DIR_DY = [-1, 0, 1, 0];
+
+// Game states
+const STATE_TITLE = 0;
+const STATE_PLAYING = 1;
+const STATE_WAVE_CLEAR = 2;
+const STATE_DYING = 3;
+const STATE_GAME_OVER = 4;
+const STATE_PAUSED = 5;
+
+// Wave clear sub-states
+const CLEAR_SHOW_MESSAGE = 0;
+const CLEAR_BONUS_FILL = 1;
+const CLEAR_SHOW_WAVE = 2;
+
+// Timing
+const HOP_DURATION = 200; // ms for hop animation
+const TARGET_FPS = 60;
+const FRAME_TIME = 1000 / TARGET_FPS;
+
+  </script>
+  <!-- src/engine/palette.js -->
+  <script>
+// NES-inspired color palette
+// Subset of the NES 54-color palette, curated for Maripoga's Errand
+const PALETTE = {
+  // Backgrounds
+  BLACK:       '#0f0f0f',
+  DARK_BG:     '#0f0f1a',
+  GRID_LINE:   '#1a1a2e',
+
+  // Neutral tiles
+  NEUTRAL:     '#2a2a3a',
+  NEUTRAL_ALT: '#252535', // Slight variation for grid texture
+
+  // Maripoga Green
+  GREEN:       '#4ade80',
+  GREEN_DARK:  '#1a5c35',
+  GREEN_MID:   '#2d8c50',
+  GREEN_LIGHT: '#6bee9e',
+
+  // Red Frog
+  RED:         '#ef4444',
+  RED_DARK:    '#5c1a1a',
+  RED_MID:     '#b83030',
+
+  // Purple Frog
+  PURPLE:      '#a855f7',
+  PURPLE_DARK: '#3d1a5c',
+  PURPLE_MID:  '#7c3aed',
+
+  // Blue Frog
+  BLUE:        '#3b82f6',
+  BLUE_DARK:   '#1a2d5c',
+  BLUE_MID:    '#2563eb',
+
+  // Hazards
+  SPIKE:       '#f59e0b',
+  SPIKE_DARK:  '#3a2a0a',
+  WATER:       '#06b6d4',
+  WATER_DARK:  '#0a3d47',
+
+  // HUD / Text
+  WHITE:       '#ffffff',
+  HUD_BG:      '#111111',
+  HUD_TEXT:    '#d0d0d0',
+  SCORE_COLOR: '#4ade80',
+
+  // Sky colors (day/night cycle)
+  SKY_DAY:       '#4a90d9',  // Medium sky blue - HUD background daytime
+  SKY_DAY_DARK:  '#3a7bc8',  // Slightly darker sky - reed area daytime
+  SKY_NIGHT:     '#0a0a15',  // Near-black with slight blue - HUD nighttime
+  SKY_NIGHT_DARK:'#080b12',  // Dark - reed area nighttime
+
+  // Water / Swamp background
+  WATER_BG:    '#0a1520',
+  WATER_DAY:   '#1a4060',    // Lighter/bluer water for daytime
+  NEUTRAL_HI:  '#353545',
+
+  // Decoration — reeds
+  REED_GREEN:  '#1a3d2e',
+  REED_BROWN:  '#3a2810',
+
+  // Smart Frog
+  SMART:       '#e0e0e0',
+  SMART_DARK:  '#4a4a5a',
+  SMART_MID:   '#8a8a9a',
+
+  // Snake (orange)
+  SNAKE_BODY:       '#e87820',
+  SNAKE_BODY_DARK:  '#8a4a10',
+  SNAKE_PATTERN:    '#f5a040',
+
+  // Ladybug (red-tinted snail)
+  LADYBUG_RED:      '#ef4444',
+  LADYBUG_RED_DARK: '#5c1a1a',
+
+  // Character accents
+  SKIN:        '#f5c87a',
+  SCARF:       '#ef4444',
+  EYE_WHITE:   '#ffffff',
+  EYE_PUPIL:   '#0f0f0f',
+  ENEMY_EYE:   '#ffff00',
+
+  // Bonus item colors
+  GOLD:        '#ffd700',
+  GOLD_DARK:   '#b8860b',
+  PINK:        '#ff69b4',
+  PINK_DARK:   '#c71585',
+  CYAN:        '#00e5ff',
+  CYAN_DARK:   '#007c8a',
+};
+
+// Map tile states to colors
+const TILE_COLORS = {
+  [TILE_NEUTRAL]: PALETTE.NEUTRAL,
+  [TILE_GREEN]:   PALETTE.GREEN_DARK,
+  [TILE_RED]:     PALETTE.RED_DARK,
+  [TILE_PURPLE]:  PALETTE.PURPLE_DARK,
+  [TILE_BLUE]:    PALETTE.BLUE_DARK,
+  [TILE_SPIKE]:   PALETTE.SPIKE_DARK,
+  [TILE_WATER]:   PALETTE.WATER_DARK,
+  [TILE_ZOMBIE]:  '#3a3a4a',
+  [TILE_SMART]:   PALETTE.SMART_DARK,
+};
+
+// Brighter versions for claimed-tile borders/accents
+const TILE_ACCENT_COLORS = {
+  [TILE_GREEN]:   PALETTE.GREEN_MID,
+  [TILE_RED]:     PALETTE.RED_MID,
+  [TILE_PURPLE]:  PALETTE.PURPLE_MID,
+  [TILE_BLUE]:    PALETTE.BLUE_MID,
+  [TILE_SMART]:   PALETTE.SMART_MID,
+};
+
+  </script>
+  <!-- src/engine/input.js -->
+  <script>
+// Input handling - keyboard state tracking
+const Input = {
+  keys: {},
+  justPressed: {},
+
+  init() {
+    window.addEventListener('keydown', (e) => {
+      if (!this.keys[e.code]) {
+        this.justPressed[e.code] = true;
+      }
+      this.keys[e.code] = true;
+      // Prevent arrow key scrolling
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) {
+        e.preventDefault();
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      this.keys[e.code] = false;
+    });
+  },
+
+  isDown(code) {
+    return !!this.keys[code];
+  },
+
+  wasPressed(code) {
+    return !!this.justPressed[code];
+  },
+
+  // Call at end of each frame
+  clearFrame() {
+    this.justPressed = {};
+  },
+
+  // Get direction from arrow keys (returns DIR_* or DIR_NONE)
+  getDirection() {
+    if (this.wasPressed('ArrowUp') || this.wasPressed('KeyW')) return DIR_UP;
+    if (this.wasPressed('ArrowRight') || this.wasPressed('KeyD')) return DIR_RIGHT;
+    if (this.wasPressed('ArrowDown') || this.wasPressed('KeyS')) return DIR_DOWN;
+    if (this.wasPressed('ArrowLeft') || this.wasPressed('KeyA')) return DIR_LEFT;
+    return DIR_NONE;
+  },
+};
+
+  </script>
+  <!-- src/engine/renderer.js -->
+  <script>
+// Canvas renderer - handles drawing at NES resolution
+const Renderer = {
+  canvas: null,
+  ctx: null,
+  crtOverlay: null,
+
+  init() {
+    this.canvas = document.getElementById('game');
+    this.canvas.width = SCREEN_WIDTH;
+    this.canvas.height = SCREEN_HEIGHT;
+    this.canvas.style.width = (SCREEN_WIDTH * SCALE) + 'px';
+    this.canvas.style.height = (SCREEN_HEIGHT * SCALE) + 'px';
+    this.ctx = this.canvas.getContext('2d');
+    this.ctx.imageSmoothingEnabled = false;
+    // Ensure canvas can receive keyboard events
+    this.canvas.tabIndex = 0;
+    this.canvas.style.outline = 'none';
+    this.canvas.focus();
+
+    // Create CRT scanline overlay
+    this.createCRTOverlay();
+  },
+
+  createCRTOverlay() {
+    // CRT scanline overlay with vignette
+    this.crtOverlay = document.createElement('div');
+    this.crtOverlay.style.position = 'absolute';
+    this.crtOverlay.style.top = '0';
+    this.crtOverlay.style.left = '0';
+    this.crtOverlay.style.width = (SCREEN_WIDTH * SCALE) + 'px';
+    this.crtOverlay.style.height = (SCREEN_HEIGHT * SCALE) + 'px';
+    this.crtOverlay.style.pointerEvents = 'none';
+    this.crtOverlay.style.userSelect = 'none';
+    this.crtOverlay.style.zIndex = '10';
+    this.crtOverlay.style.background = 'repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px)';
+    this.crtOverlay.style.boxShadow = 'inset 0 0 100px rgba(0,0,0,0.5)';
+    this.crtOverlay.style.borderRadius = '4px';
+
+    const container = document.createElement('div');
+    container.style.position = 'relative';
+    container.style.display = 'inline-block';
+
+    this.canvas.parentElement.appendChild(container);
+    container.appendChild(this.canvas);
+    container.appendChild(this.crtOverlay);
+  },
+
+  clear() {
+    this.ctx.fillStyle = PALETTE.DARK_BG;
+    this.ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  },
+
+  // Draw a filled rectangle
+  fillRect(x, y, w, h, color) {
+    this.ctx.fillStyle = color;
+    this.ctx.fillRect(Math.floor(x), Math.floor(y), w, h);
+  },
+
+  // Draw a single tile at grid position — solid color, authentic NES style
+  drawTile(col, row, color) {
+    const x = col * TILE_SIZE;
+    const y = (row + GRID_OFFSET_Y) * TILE_SIZE; // Skip HUD + decoration row
+    this.ctx.fillStyle = color;
+    this.ctx.fillRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+  },
+
+  // Blocky 8x8 NES-style arcade font (7 rows used, chars on 8px grid)
+  bitmapFont: {
+    'A': [0x7C,0xC6,0xC6,0xFE,0xC6,0xC6,0xC6],
+    'B': [0xFC,0xC6,0xFC,0xC6,0xC6,0xC6,0xFC],
+    'C': [0x7C,0xC6,0xC0,0xC0,0xC0,0xC6,0x7C],
+    'D': [0xF8,0xCC,0xC6,0xC6,0xC6,0xCC,0xF8],
+    'E': [0xFE,0xC0,0xC0,0xFC,0xC0,0xC0,0xFE],
+    'F': [0xFE,0xC0,0xC0,0xFC,0xC0,0xC0,0xC0],
+    'G': [0x7C,0xC6,0xC0,0xCE,0xC6,0xC6,0x7C],
+    'H': [0xC6,0xC6,0xC6,0xFE,0xC6,0xC6,0xC6],
+    'I': [0x7E,0x18,0x18,0x18,0x18,0x18,0x7E],
+    'J': [0x3E,0x0C,0x0C,0x0C,0x0C,0xCC,0x78],
+    'K': [0xC6,0xCC,0xD8,0xF0,0xD8,0xCC,0xC6],
+    'L': [0xC0,0xC0,0xC0,0xC0,0xC0,0xC0,0xFE],
+    'M': [0xC6,0xEE,0xFE,0xD6,0xC6,0xC6,0xC6],
+    'N': [0xC6,0xE6,0xF6,0xDE,0xCE,0xC6,0xC6],
+    'O': [0x7C,0xC6,0xC6,0xC6,0xC6,0xC6,0x7C],
+    'P': [0xFC,0xC6,0xC6,0xFC,0xC0,0xC0,0xC0],
+    'Q': [0x7C,0xC6,0xC6,0xC6,0xD6,0xCC,0x76],
+    'R': [0xFC,0xC6,0xC6,0xFC,0xD8,0xCC,0xC6],
+    'S': [0x7C,0xC6,0xC0,0x7C,0x06,0xC6,0x7C],
+    'T': [0xFE,0x18,0x18,0x18,0x18,0x18,0x18],
+    'U': [0xC6,0xC6,0xC6,0xC6,0xC6,0xC6,0x7C],
+    'V': [0xC6,0xC6,0xC6,0xC6,0x6C,0x38,0x10],
+    'W': [0xC6,0xC6,0xC6,0xD6,0xFE,0xEE,0xC6],
+    'X': [0xC6,0xC6,0x6C,0x38,0x6C,0xC6,0xC6],
+    'Y': [0xC6,0xC6,0x6C,0x38,0x18,0x18,0x18],
+    'Z': [0xFE,0x06,0x0C,0x18,0x30,0x60,0xFE],
+    '0': [0x7C,0xC6,0xCE,0xD6,0xE6,0xC6,0x7C],
+    '1': [0x18,0x38,0x18,0x18,0x18,0x18,0x7E],
+    '2': [0x7C,0xC6,0x06,0x0C,0x30,0x60,0xFE],
+    '3': [0x7C,0xC6,0x06,0x3C,0x06,0xC6,0x7C],
+    '4': [0x0C,0x1C,0x3C,0x6C,0xFE,0x0C,0x0C],
+    '5': [0xFE,0xC0,0xFC,0x06,0x06,0xC6,0x7C],
+    '6': [0x38,0x60,0xC0,0xFC,0xC6,0xC6,0x7C],
+    '7': [0xFE,0x06,0x0C,0x18,0x30,0x30,0x30],
+    '8': [0x7C,0xC6,0xC6,0x7C,0xC6,0xC6,0x7C],
+    '9': [0x7C,0xC6,0xC6,0x7E,0x06,0x0C,0x78],
+    ' ': [0x00,0x00,0x00,0x00,0x00,0x00,0x00],
+    '.': [0x00,0x00,0x00,0x00,0x00,0x18,0x18],
+    '!': [0x18,0x18,0x18,0x18,0x18,0x00,0x18],
+    '?': [0x7C,0xC6,0x06,0x0C,0x18,0x00,0x18],
+    ':': [0x00,0x18,0x18,0x00,0x18,0x18,0x00],
+    '/': [0x06,0x0C,0x18,0x30,0x60,0xC0,0x80],
+    '%': [0xC6,0xCC,0x18,0x30,0x66,0xC6,0x00],
+    '+': [0x00,0x18,0x18,0x7E,0x18,0x18,0x00],
+    '-': [0x00,0x00,0x00,0x7E,0x00,0x00,0x00],
+    '=': [0x00,0x00,0x7E,0x00,0x7E,0x00,0x00],
+    'x': [0x00,0xC6,0x6C,0x38,0x6C,0xC6,0x00],
+    '\'': [0x18,0x18,0x30,0x00,0x00,0x00,0x00],
+  },
+
+  // Draw text using blocky 8x8 NES arcade font
+  drawText(text, x, y, color, size) {
+    color = color || PALETTE.WHITE;
+    const px = Math.floor(x);
+    const py = Math.floor(y);
+    let cursorX = px;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i].toUpperCase();
+      const glyph = this.bitmapFont[char];
+
+      if (!glyph) {
+        cursorX += 8;
+        continue;
+      }
+
+      this.ctx.fillStyle = color;
+      for (let row = 0; row < 7; row++) {
+        const bits = glyph[row];
+        for (let col = 0; col < 8; col++) {
+          if (bits & (1 << (7 - col))) {
+            this.ctx.fillRect(cursorX + col, py + row, 1, 1);
+          }
+        }
+      }
+
+      cursorX += 8; // 8px grid
+    }
+  },
+
+  // Draw a sprite from pixel data (array of rows, each row is array of palette colors or null for transparent)
+  drawSprite(spriteData, x, y) {
+    const px = Math.floor(x);
+    const py = Math.floor(y);
+    for (let row = 0; row < spriteData.length; row++) {
+      for (let col = 0; col < spriteData[row].length; col++) {
+        const color = spriteData[row][col];
+        if (color) {
+          this.ctx.fillStyle = color;
+          this.ctx.fillRect(px + col, py + row, 1, 1);
+        }
+      }
+    }
+  },
+};
+
+  </script>
+  <!-- src/engine/grid.js -->
+  <script>
+// Grid state management - the 16x14 tile grid
+const Grid = {
+  tiles: [],
+
+  init() {
+    this.tiles = [];
+    for (let r = 0; r < GRID_ROWS; r++) {
+      this.tiles[r] = [];
+      for (let c = 0; c < GRID_COLS; c++) {
+        this.tiles[r][c] = TILE_NEUTRAL;
+      }
+    }
+  },
+
+  // Get tile state at grid position
+  get(col, row) {
+    if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return -1;
+    return this.tiles[row][col];
+  },
+
+  // Set tile state
+  set(col, row, state) {
+    if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return;
+    this.tiles[row][col] = state;
+  },
+
+  // Check if position is valid
+  inBounds(col, row) {
+    return col >= 0 && col < GRID_COLS && row >= 0 && row < GRID_ROWS;
+  },
+
+  // Count tiles of a specific state
+  count(state) {
+    let n = 0;
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        if (this.tiles[r][c] === state) n++;
+      }
+    }
+    return n;
+  },
+
+  // Get fill percentage for a state (excludes hazard tiles from total)
+  fillPercent(state) {
+    const hazardCount = this.count(TILE_SPIKE) + this.count(TILE_WATER);
+    const total = GRID_COLS * GRID_ROWS - hazardCount;
+    return this.count(state) / total;
+  },
+
+  // Convert all tiles of one state to another
+  convertAll(fromState, toState) {
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        if (this.tiles[r][c] === fromState) {
+          this.tiles[r][c] = toState;
+        }
+      }
+    }
+  },
+
+  // Draw the entire grid
+  draw() {
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        const state = this.tiles[r][c];
+        const color = TILE_COLORS[state] || PALETTE.NEUTRAL;
+        Renderer.drawTile(c, r, color);
+
+        // Draw accent border on claimed tiles
+        if (state !== TILE_NEUTRAL && TILE_ACCENT_COLORS[state]) {
+          const x = c * TILE_SIZE;
+          const y = (r + GRID_OFFSET_Y) * TILE_SIZE;
+          Renderer.fillRect(x + 1, y + 1, TILE_SIZE - 2, 1, TILE_ACCENT_COLORS[state]);
+          Renderer.fillRect(x + 1, y + 1, 1, TILE_SIZE - 2, TILE_ACCENT_COLORS[state]);
+        }
+      }
+    }
+  },
+};
+
+  </script>
+  <!-- src/art/sprites.js -->
+  <script>
+// Sprite definitions - pixel art as 2D arrays of palette colors
+// Each sprite is 16x16, null = transparent
+// These are programmer-art placeholders; the Art agent will refine them.
+
+const Sprites = {
+  // Maripoga - idle frame
+  maripoga_idle: null,
+  // Maripoga - hop frame
+  maripoga_hop: null,
+  // Maripoga - death frame
+  maripoga_death: null,
+  // Red frog idle
+  red_frog_idle: null,
+  // Red frog hop
+  red_frog_hop: null,
+  // Purple frog idle
+  purple_frog_idle: null,
+  // Purple frog hop
+  purple_frog_hop: null,
+  // Blue frog idle
+  blue_frog_idle: null,
+  // Blue frog hop
+  blue_frog_hop: null,
+
+  // Add black outlines to a sprite
+  addOutline(sprite) {
+    const B = PALETTE.BLACK;
+    const _ = null;
+    const height = sprite.length;
+    const width = sprite[0].length;
+
+    // Create a copy of the sprite
+    const outlined = sprite.map(row => [...row]);
+
+    // For each pixel, if it's non-transparent, check neighbors
+    // If any neighbor is transparent, mark it for outline
+    const outlinePixels = [];
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const pixel = sprite[y][x];
+        if (pixel !== null) {
+          // Check 4-directional neighbors
+          const neighbors = [
+            [x, y-1], // up
+            [x+1, y], // right
+            [x, y+1], // down
+            [x-1, y], // left
+          ];
+          for (const [nx, ny] of neighbors) {
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+              if (sprite[ny][nx] === null) {
+                // This neighbor is transparent, add black outline there
+                outlinePixels.push([nx, ny]);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Apply outline pixels
+    for (const [x, y] of outlinePixels) {
+      if (outlined[y][x] === null) {
+        outlined[y][x] = B;
+      }
+    }
+
+    return outlined;
+  },
+
+  init() {
+    const G = PALETTE.GREEN;
+    const Gd = PALETTE.GREEN_DARK;
+    const W = PALETTE.WHITE;
+    const B = PALETTE.BLACK;
+    const S = PALETTE.SCARF;
+    const Sk = PALETTE.SKIN;
+    const _ = null;
+
+    // Maripoga idle - 16x16 frog-boy with big eyes on top, heroic stance
+    this.maripoga_idle = [
+      [_,_,_,W,W,W,_,_,_,_,W,W,W,_,_,_],
+      [_,_,W,W,B,W,W,_,_,W,W,B,W,W,_,_],
+      [_,_,W,W,W,W,G,G,G,G,W,W,W,W,_,_],
+      [_,_,_,G,G,G,G,G,G,G,G,G,G,_,_,_],
+      [_,_,_,G,Gd,G,Sk,Sk,Sk,G,Gd,G,_,_,_,_],
+      [_,_,_,G,G,Sk,Sk,Sk,Sk,Sk,G,G,_,_,_,_],
+      [_,_,_,_,G,G,Sk,Sk,Sk,G,G,_,_,_,_,_],
+      [_,_,_,S,S,S,S,S,S,S,S,S,_,_,_,_],
+      [_,_,_,_,S,G,G,G,G,G,G,S,S,_,_,_],
+      [_,_,_,G,G,G,G,G,G,G,G,G,G,G,_,_],
+      [_,_,G,G,Gd,G,G,G,G,G,G,Gd,G,G,_,_],
+      [_,_,G,G,G,G,G,G,G,G,G,G,G,G,_,_],
+      [_,_,G,G,_,_,G,G,G,G,_,_,G,G,_,_],
+      [_,G,G,_,_,_,G,G,G,G,_,_,_,G,G,_],
+      [_,G,Gd,_,_,_,_,_,_,_,_,_,_,Gd,G,_],
+      [G,G,Gd,_,_,_,_,_,_,_,_,_,_,Gd,G,G],
+    ];
+
+    // Maripoga hop - legs tucked, body compressed, scarf trailing
+    this.maripoga_hop = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,S,S,_],
+      [_,_,_,W,W,W,_,_,_,_,W,W,W,S,_,_],
+      [_,_,W,W,B,W,W,_,_,W,W,B,W,W,_,_],
+      [_,_,W,W,W,W,G,G,G,G,W,W,W,W,_,_],
+      [_,_,_,G,G,G,G,G,G,G,G,G,G,_,_,_],
+      [_,_,_,G,Gd,G,Sk,Sk,Sk,G,Gd,G,_,_,_,_],
+      [_,_,_,G,G,Sk,Sk,Sk,Sk,Sk,G,G,_,_,_,_],
+      [_,_,_,S,S,S,S,S,S,S,S,S,_,_,_,_],
+      [_,_,G,G,G,G,G,G,G,G,G,G,G,G,_,_],
+      [_,G,G,Gd,G,G,G,G,G,G,G,G,Gd,G,G,_],
+      [_,G,G,G,G,G,G,G,G,G,G,G,G,G,G,_],
+      [G,G,_,G,G,G,G,G,G,G,G,G,G,_,G,G],
+      [G,_,_,_,G,G,_,_,_,_,G,G,_,_,_,G],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // Maripoga death - flattened, X eyes
+    this.maripoga_death = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,W,_,_,_,_,_,_,_,_,_,_,W,_,_],
+      [_,W,B,W,_,W,_,_,_,_,W,_,W,B,W,_],
+      [W,B,Sk,B,W,B,W,G,G,W,B,W,B,Sk,B,W],
+      [_,W,B,W,Sk,B,W,G,G,W,B,Sk,W,B,W,_],
+      [_,_,W,Sk,Sk,Sk,G,G,G,G,Sk,Sk,Sk,W,_,_],
+      [_,_,S,S,S,S,S,G,G,S,S,S,S,S,_,_],
+      [_,_,_,G,G,G,G,G,G,G,G,G,G,_,_,_],
+    ];
+
+    // RED FROG - Wide mouth, menacing, hunched forward
+    const R = PALETTE.RED;
+    const Rd = PALETTE.RED_DARK;
+    const E = PALETTE.ENEMY_EYE;
+
+    this.red_frog_idle = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,E,E,E,_,_,_,_,E,E,E,_,_,_],
+      [_,_,E,E,B,E,_,_,_,_,E,B,E,E,_,_],
+      [_,_,E,E,E,R,R,_,_,R,R,E,E,E,_,_],
+      [_,_,_,R,R,R,R,R,R,R,R,R,R,_,_,_],
+      [_,_,_,R,Rd,R,R,R,R,R,R,Rd,R,_,_,_],
+      [_,_,R,R,R,B,B,B,B,B,B,R,R,R,_,_],
+      [_,_,R,R,R,W,W,W,W,W,W,R,R,R,_,_],
+      [_,_,R,R,R,R,R,R,R,R,R,R,R,R,_,_],
+      [_,R,R,R,R,R,R,R,R,R,R,R,R,R,R,_],
+      [_,R,R,Rd,R,R,R,R,R,R,R,R,Rd,R,R,_],
+      [_,R,R,R,R,R,R,R,R,R,R,R,R,R,R,_],
+      [_,_,R,R,R,_,R,R,R,R,_,R,R,R,_,_],
+      [_,R,R,R,_,_,R,R,R,R,_,_,R,R,R,_],
+      [_,R,R,_,_,_,_,_,_,_,_,_,_,R,R,_],
+      [R,R,Rd,_,_,_,_,_,_,_,_,_,_,Rd,R,R],
+    ];
+
+    this.red_frog_hop = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,E,E,E,_,_,_,_,E,E,E,_,_,_],
+      [_,_,E,E,B,E,_,_,_,_,E,B,E,E,_,_],
+      [_,_,E,E,E,R,R,_,_,R,R,E,E,E,_,_],
+      [_,_,_,R,R,R,R,R,R,R,R,R,R,_,_,_],
+      [_,_,R,R,Rd,R,R,R,R,R,R,Rd,R,R,_,_],
+      [_,_,R,R,B,B,B,B,B,B,B,B,R,R,_,_],
+      [_,_,R,R,W,W,W,W,W,W,W,W,R,R,_,_],
+      [_,R,R,R,R,R,R,R,R,R,R,R,R,R,R,_],
+      [_,R,R,Rd,R,R,R,R,R,R,R,R,Rd,R,R,_],
+      [R,R,R,R,R,R,R,R,R,R,R,R,R,R,R,R],
+      [R,R,R,_,R,R,R,R,R,R,R,R,_,R,R,R],
+      [R,_,_,_,_,R,R,_,_,R,R,_,_,_,_,R],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // PURPLE FROG - Sleeker, chaser build, angular eyes
+    const P = PALETTE.PURPLE;
+    const Pd = PALETTE.PURPLE_DARK;
+
+    this.purple_frog_idle = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,E,E,_,_,_,_,E,E,_,_,_,_],
+      [_,_,_,E,E,B,E,_,_,E,B,E,E,_,_,_],
+      [_,_,_,E,E,E,P,P,P,P,E,E,E,_,_,_],
+      [_,_,_,_,P,P,P,P,P,P,P,P,_,_,_,_],
+      [_,_,_,P,P,Pd,P,P,P,P,Pd,P,P,_,_,_],
+      [_,_,P,P,P,P,P,P,P,P,P,P,P,P,_,_],
+      [_,_,P,P,P,B,B,B,B,B,B,P,P,P,_,_],
+      [_,_,P,P,P,P,P,P,P,P,P,P,P,P,_,_],
+      [_,P,P,P,P,P,P,P,P,P,P,P,P,P,P,_],
+      [_,P,P,Pd,P,P,P,P,P,P,P,P,Pd,P,P,_],
+      [_,P,P,P,P,P,P,P,P,P,P,P,P,P,P,_],
+      [_,_,P,P,_,P,P,P,P,P,P,_,P,P,_,_],
+      [_,_,P,P,_,_,P,P,P,P,_,_,P,P,_,_],
+      [_,P,P,_,_,_,_,_,_,_,_,_,_,P,P,_],
+      [P,P,Pd,_,_,_,_,_,_,_,_,_,_,Pd,P,P],
+    ];
+
+    this.purple_frog_hop = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,E,E,_,_,_,_,E,E,_,_,_,_],
+      [_,_,_,E,E,B,E,_,_,E,B,E,E,_,_,_],
+      [_,_,_,E,E,E,P,P,P,P,E,E,E,_,_,_],
+      [_,_,_,P,P,P,P,P,P,P,P,P,P,_,_,_],
+      [_,_,P,P,Pd,P,P,P,P,P,P,Pd,P,P,_,_],
+      [_,P,P,P,P,P,P,P,P,P,P,P,P,P,P,_],
+      [_,P,P,B,B,B,B,B,B,B,B,B,B,P,P,_],
+      [_,P,P,P,P,P,P,P,P,P,P,P,P,P,P,_],
+      [P,P,P,Pd,P,P,P,P,P,P,P,P,Pd,P,P,P],
+      [P,P,P,P,P,P,P,P,P,P,P,P,P,P,P,P],
+      [P,P,_,P,P,P,P,P,P,P,P,P,P,_,P,P],
+      [P,_,_,_,P,P,_,_,_,_,P,P,_,_,_,P],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // Snail sprite - small hazard
+    const Sn = PALETTE.SPIKE; // Orange-ish for snail shell
+    const Snd = PALETTE.SPIKE_DARK;
+    const SnB = PALETTE.NEUTRAL; // Snail body gray
+
+    this.snail = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,Sn,Sn,Sn,Sn,_,_,_,_,_,_,_],
+      [_,_,_,_,Sn,Snd,Sn,Snd,Sn,Sn,_,_,_,_,_,_],
+      [_,_,_,Sn,Snd,Sn,Snd,Sn,Snd,Sn,Sn,_,_,_,_,_],
+      [_,_,_,Sn,Sn,Sn,Sn,Sn,Sn,Snd,Sn,_,_,_,_,_],
+      [_,_,_,_,SnB,SnB,SnB,SnB,Sn,Sn,_,_,_,_,_,_],
+      [_,_,_,SnB,W,B,SnB,W,B,SnB,SnB,_,_,_,_,_],
+      [_,_,_,SnB,SnB,SnB,SnB,SnB,SnB,SnB,SnB,_,_,_,_,_],
+      [_,_,_,_,SnB,_,_,_,_,_,SnB,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // BLUE FROG - Rounder, teleporter look, mysterious eyes
+    const Bl = PALETTE.BLUE;
+    const Bd = PALETTE.BLUE_DARK;
+
+    this.blue_frog_idle = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,E,E,E,_,_,E,E,E,_,_,_,_],
+      [_,_,_,E,E,E,B,_,_,B,E,E,E,_,_,_],
+      [_,_,_,E,E,E,Bl,Bl,Bl,Bl,E,E,E,_,_,_],
+      [_,_,_,_,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,_,_,_,_],
+      [_,_,_,Bl,Bl,Bd,Bl,Bl,Bl,Bl,Bd,Bl,Bl,_,_,_],
+      [_,_,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,_,_],
+      [_,_,Bl,Bl,B,B,B,B,B,B,B,B,Bl,Bl,_,_],
+      [_,_,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,_,_],
+      [_,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,_],
+      [_,Bl,Bl,Bd,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bd,Bl,Bl,_],
+      [_,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,_],
+      [_,_,Bl,Bl,Bl,_,Bl,Bl,Bl,Bl,_,Bl,Bl,Bl,_,_],
+      [_,_,Bl,Bl,_,_,_,Bl,Bl,_,_,_,Bl,Bl,_,_],
+      [_,Bl,Bl,_,_,_,_,_,_,_,_,_,_,Bl,Bl,_],
+      [Bl,Bl,Bd,_,_,_,_,_,_,_,_,_,_,Bd,Bl,Bl],
+    ];
+
+    this.blue_frog_hop = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,E,E,E,_,_,E,E,E,_,_,_,_],
+      [_,_,_,E,E,E,B,_,_,B,E,E,E,_,_,_],
+      [_,_,_,E,E,E,Bl,Bl,Bl,Bl,E,E,E,_,_,_],
+      [_,_,_,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,_,_,_],
+      [_,_,Bl,Bl,Bd,Bl,Bl,Bl,Bl,Bl,Bl,Bd,Bl,Bl,_,_],
+      [_,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,_],
+      [_,Bl,Bl,B,B,B,B,B,B,B,B,B,B,Bl,Bl,_],
+      [_,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,_],
+      [Bl,Bl,Bl,Bd,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bd,Bl,Bl,Bl],
+      [Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl],
+      [Bl,Bl,Bl,_,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,_,Bl,Bl,Bl],
+      [Bl,_,_,_,_,Bl,Bl,_,_,Bl,Bl,_,_,_,_,Bl],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // ZOMBIE FROG - Gray, hunched, red eyes
+    const Z = PALETTE.NEUTRAL;
+    const Zd = PALETTE.HUD_TEXT; // Darker gray
+    const ZE = PALETTE.RED; // Red eyes instead of yellow
+
+    this.zombie_frog_idle = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,ZE,ZE,_,_,_,_,ZE,ZE,_,_,_,_],
+      [_,_,_,ZE,ZE,B,ZE,_,_,ZE,B,ZE,ZE,_,_,_],
+      [_,_,_,ZE,ZE,ZE,Z,Z,Z,Z,ZE,ZE,ZE,_,_,_],
+      [_,_,_,_,Z,Z,Z,Z,Z,Z,Z,Z,_,_,_,_],
+      [_,_,_,Z,Z,Zd,Z,Z,Z,Z,Zd,Z,Z,_,_,_],
+      [_,_,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,_,_],
+      [_,_,Z,Z,Z,B,B,B,B,B,B,Z,Z,Z,_,_],
+      [_,_,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,_,_],
+      [_,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,_],
+      [_,Z,Z,Zd,Z,Z,Z,Z,Z,Z,Z,Z,Zd,Z,Z,_],
+      [_,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,_],
+      [_,_,Z,Z,_,Z,Z,Z,Z,Z,Z,_,Z,Z,_,_],
+      [_,_,Z,Z,_,_,Z,Z,Z,Z,_,_,Z,Z,_,_],
+      [_,Z,Z,_,_,_,_,_,_,_,_,_,_,Z,Z,_],
+      [Z,Z,Zd,_,_,_,_,_,_,_,_,_,_,Zd,Z,Z],
+    ];
+
+    this.zombie_frog_hop = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,ZE,ZE,_,_,_,_,ZE,ZE,_,_,_,_],
+      [_,_,_,ZE,ZE,B,ZE,_,_,ZE,B,ZE,ZE,_,_,_],
+      [_,_,_,ZE,ZE,ZE,Z,Z,Z,Z,ZE,ZE,ZE,_,_,_],
+      [_,_,_,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,_,_,_],
+      [_,_,Z,Z,Zd,Z,Z,Z,Z,Z,Z,Zd,Z,Z,_,_],
+      [_,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,_],
+      [_,Z,Z,B,B,B,B,B,B,B,B,B,B,Z,Z,_],
+      [_,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,_],
+      [Z,Z,Z,Zd,Z,Z,Z,Z,Z,Z,Z,Z,Zd,Z,Z,Z],
+      [Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z],
+      [Z,Z,_,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,_,Z,Z],
+      [Z,_,_,_,Z,Z,_,_,_,_,Z,Z,_,_,_,Z],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // SNAKE - Orange serpent, bigger and more visible
+    const Sg = PALETTE.SNAKE_BODY;
+    const Sgd = PALETTE.SNAKE_BODY_DARK;
+    const Sy = PALETTE.SNAKE_PATTERN;
+
+    // Snake idle - coiled, larger body
+    this.snake_idle = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,Sg,Sg,Sg,Sg,Sg,_,_,_,_,_,_],
+      [_,_,_,_,Sg,Sy,Sg,Sg,Sy,Sg,Sg,_,_,_,_,_],
+      [_,_,_,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,_,_,_,_],
+      [_,_,Sg,Sgd,Sg,Sgd,Sg,Sg,Sgd,Sg,Sgd,Sg,Sg,_,_,_],
+      [_,Sg,Sg,Sg,Sgd,Sg,Sg,Sg,Sg,Sgd,Sg,Sg,Sg,_,_,_],
+      [_,Sg,Sy,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sy,Sg,Sg,_,_],
+      [_,_,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,_,_,_],
+      [_,_,_,Sg,Sg,Sg,W,B,_,W,B,Sg,Sg,_,_,_],
+      [_,_,_,_,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,_,_,_,_],
+      [_,_,_,_,Sg,Sg,Sgd,R,R,Sgd,Sg,Sg,_,_,_,_],
+      [_,_,_,_,_,Sg,Sg,Sg,Sg,Sg,Sg,_,_,_,_,_],
+      [_,_,_,_,_,_,Sg,Sg,Sg,Sg,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // Snake moving - stretched horizontal, thicker body
+    this.snake_move = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [Sg,Sg,Sg,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [Sg,Sy,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,_,_],
+      [Sg,Sg,Sgd,Sg,Sgd,Sg,Sy,Sg,Sgd,Sg,Sy,Sg,Sg,Sg,Sg,_],
+      [Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,W,B,_],
+      [_,Sg,Sgd,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,W,B,_],
+      [_,_,Sg,Sg,Sg,Sg,Sy,Sg,Sgd,Sg,Sy,Sg,Sg,Sg,R,R],
+      [_,_,_,_,_,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // LADYBUG - Recolored snail (red shell instead of orange)
+    const Lb = PALETTE.LADYBUG_RED;
+    const Lbd = PALETTE.LADYBUG_RED_DARK;
+
+    this.ladybug = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,Lb,Lb,Lb,Lb,_,_,_,_,_,_,_],
+      [_,_,_,_,Lb,Lbd,Lb,Lbd,Lb,Lb,_,_,_,_,_,_],
+      [_,_,_,Lb,Lbd,Lb,Lbd,Lb,Lbd,Lb,Lb,_,_,_,_,_],
+      [_,_,_,Lb,Lb,Lb,Lb,Lb,Lb,Lbd,Lb,_,_,_,_,_],
+      [_,_,_,_,SnB,SnB,SnB,SnB,Lb,Lb,_,_,_,_,_,_],
+      [_,_,_,SnB,W,B,SnB,W,B,SnB,SnB,_,_,_,_,_],
+      [_,_,_,SnB,SnB,SnB,SnB,SnB,SnB,SnB,SnB,_,_,_,_,_],
+      [_,_,_,_,SnB,_,_,_,_,_,SnB,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // SMART FROG - Off-white/cream frog with red bow tie
+    const Sm = PALETTE.SMART;
+    const Smd = PALETTE.SMART_DARK;
+    const BT = PALETTE.SCARF; // Bow tie = red
+
+    this.smart_frog_idle = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,E,E,E,_,_,_,_,E,E,E,_,_,_],
+      [_,_,E,E,B,E,_,_,_,_,E,B,E,E,_,_],
+      [_,_,E,E,E,Sm,Sm,_,_,Sm,Sm,E,E,E,_,_],
+      [_,_,_,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,_,_,_],
+      [_,_,_,Sm,Smd,Sm,Sm,Sm,Sm,Sm,Sm,Smd,Sm,_,_,_],
+      [_,_,Sm,Sm,Sm,B,B,B,B,B,B,Sm,Sm,Sm,_,_],
+      [_,_,Sm,Sm,Sm,W,W,W,W,W,W,Sm,Sm,Sm,_,_],
+      [_,_,_,_,BT,BT,_,BT,BT,_,BT,BT,_,_,_,_],
+      [_,_,_,_,_,BT,BT,BT,BT,BT,BT,_,_,_,_,_],
+      [_,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,_],
+      [_,Sm,Sm,Smd,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Smd,Sm,Sm,_],
+      [_,_,Sm,Sm,Sm,_,Sm,Sm,Sm,Sm,_,Sm,Sm,Sm,_,_],
+      [_,Sm,Sm,Sm,_,_,Sm,Sm,Sm,Sm,_,_,Sm,Sm,Sm,_],
+      [_,Sm,Sm,_,_,_,_,_,_,_,_,_,_,Sm,Sm,_],
+      [Sm,Sm,Smd,_,_,_,_,_,_,_,_,_,_,Smd,Sm,Sm],
+    ];
+
+    this.smart_frog_hop = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,E,E,E,_,_,_,_,E,E,E,_,_,_],
+      [_,_,E,E,B,E,_,_,_,_,E,B,E,E,_,_],
+      [_,_,E,E,E,Sm,Sm,_,_,Sm,Sm,E,E,E,_,_],
+      [_,_,_,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,_,_,_],
+      [_,_,Sm,Sm,Smd,Sm,Sm,Sm,Sm,Sm,Sm,Smd,Sm,Sm,_,_],
+      [_,_,Sm,Sm,B,B,B,B,B,B,B,B,Sm,Sm,_,_],
+      [_,_,_,BT,BT,_,BT,BT,_,BT,BT,_,_,_,_,_],
+      [_,_,_,_,BT,BT,BT,BT,BT,BT,_,_,_,_,_,_],
+      [_,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,_],
+      [Sm,Sm,Sm,Smd,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Smd,Sm,Sm,Sm],
+      [Sm,Sm,Sm,_,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,_,Sm,Sm,Sm],
+      [Sm,_,_,_,_,Sm,Sm,_,_,Sm,Sm,_,_,_,_,Sm],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // No outlines — clean solid sprites for authentic NES look
+
+    // === BONUS ITEM SPRITES ===
+
+    // Speed Fly (cyan/blue) - wings spread frame
+    const Cy = PALETTE.CYAN;
+    const Cyd = PALETTE.CYAN_DARK;
+
+    this.speed_fly_1 = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,Cy,Cy,_,_,_,_,_,_,Cy,Cy,_,_,_],
+      [_,_,Cy,Cy,Cy,Cy,_,_,_,Cy,Cy,Cy,Cy,_,_,_],
+      [_,_,_,Cy,Cy,Cyd,Cyd,Cyd,Cyd,Cyd,Cy,Cy,_,_,_,_],
+      [_,_,_,_,_,Cyd,W,Cyd,Cyd,W,Cyd,_,_,_,_,_],
+      [_,_,_,_,_,_,Cyd,Cyd,Cyd,Cyd,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,Cyd,Cyd,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // Speed Fly - wings folded frame
+    this.speed_fly_2 = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,Cy,_,_,_,_,Cy,_,_,_,_,_],
+      [_,_,_,_,_,Cy,Cy,_,_,Cy,Cy,_,_,_,_,_],
+      [_,_,_,_,_,Cyd,Cyd,Cyd,Cyd,Cyd,_,_,_,_,_,_],
+      [_,_,_,_,_,Cyd,W,Cyd,Cyd,W,Cyd,_,_,_,_,_],
+      [_,_,_,_,_,_,Cyd,Cyd,Cyd,Cyd,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,Cyd,Cyd,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // Invincibility Fly (gold/yellow) - wings spread frame
+    const Go = PALETTE.GOLD;
+    const God = PALETTE.GOLD_DARK;
+
+    this.invincible_fly_1 = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,Go,Go,_,_,_,_,_,_,Go,Go,_,_,_],
+      [_,_,Go,Go,Go,Go,_,_,_,Go,Go,Go,Go,_,_,_],
+      [_,_,_,Go,Go,God,God,God,God,God,Go,Go,_,_,_,_],
+      [_,_,_,_,_,God,W,God,God,W,God,_,_,_,_,_],
+      [_,_,_,_,_,_,God,God,God,God,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,God,God,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // Invincibility Fly - wings folded frame
+    this.invincible_fly_2 = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,Go,_,_,_,_,Go,_,_,_,_,_],
+      [_,_,_,_,_,Go,Go,_,_,Go,Go,_,_,_,_,_],
+      [_,_,_,_,_,God,God,God,God,God,_,_,_,_,_,_],
+      [_,_,_,_,_,God,W,God,God,W,God,_,_,_,_,_],
+      [_,_,_,_,_,_,God,God,God,God,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,God,God,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // Extra Life Fly (pink/magenta) - wings spread frame
+    const Pk = PALETTE.PINK;
+    const Pkd = PALETTE.PINK_DARK;
+
+    this.life_fly_1 = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,Pk,Pk,_,_,_,_,_,_,Pk,Pk,_,_,_],
+      [_,_,Pk,Pk,Pk,Pk,_,_,_,Pk,Pk,Pk,Pk,_,_,_],
+      [_,_,_,Pk,Pk,Pkd,Pkd,Pkd,Pkd,Pkd,Pk,Pk,_,_,_,_],
+      [_,_,_,_,_,Pkd,W,Pkd,Pkd,W,Pkd,_,_,_,_,_],
+      [_,_,_,_,_,_,Pkd,Pkd,Pkd,Pkd,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,Pkd,Pkd,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // Extra Life Fly - wings folded frame
+    this.life_fly_2 = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,Pk,_,_,_,_,Pk,_,_,_,_,_],
+      [_,_,_,_,_,Pk,Pk,_,_,Pk,Pk,_,_,_,_,_],
+      [_,_,_,_,_,Pkd,Pkd,Pkd,Pkd,Pkd,_,_,_,_,_,_],
+      [_,_,_,_,_,Pkd,W,Pkd,Pkd,W,Pkd,_,_,_,_,_],
+      [_,_,_,_,_,_,Pkd,Pkd,Pkd,Pkd,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,Pkd,Pkd,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // Green Bug - recolored snail in green tones (helpful!)
+    const Gb = PALETTE.GREEN;
+    const Gbd = PALETTE.GREEN_DARK;
+    const GbB = PALETTE.GREEN_MID; // Bug body
+
+    this.green_bug = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,Gb,Gb,Gb,Gb,_,_,_,_,_,_,_],
+      [_,_,_,_,Gb,Gbd,Gb,Gbd,Gb,Gb,_,_,_,_,_,_],
+      [_,_,_,Gb,Gbd,Gb,Gbd,Gb,Gbd,Gb,Gb,_,_,_,_,_],
+      [_,_,_,Gb,Gb,Gb,Gb,Gb,Gb,Gbd,Gb,_,_,_,_,_],
+      [_,_,_,_,GbB,GbB,GbB,GbB,Gb,Gb,_,_,_,_,_,_],
+      [_,_,_,GbB,W,B,GbB,W,B,GbB,GbB,_,_,_,_,_],
+      [_,_,_,GbB,GbB,GbB,GbB,GbB,GbB,GbB,GbB,_,_,_,_,_],
+      [_,_,_,_,GbB,_,_,_,_,_,GbB,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+  },
+
+  // Get the right sprite for an entity
+  getSprite(type, isHopping) {
+    if (type === 'player') return isHopping ? this.maripoga_hop : this.maripoga_idle;
+    if (type === 'red') return isHopping ? this.red_frog_hop : this.red_frog_idle;
+    if (type === 'purple') return isHopping ? this.purple_frog_hop : this.purple_frog_idle;
+    if (type === 'blue') return isHopping ? this.blue_frog_hop : this.blue_frog_idle;
+    if (type === 'zombie') return isHopping ? this.zombie_frog_hop : this.zombie_frog_idle;
+    if (type === 'snail') return this.snail;
+    if (type === 'snake') return isHopping ? this.snake_move : this.snake_idle;
+    if (type === 'ladybug') return this.ladybug;
+    if (type === 'smart') return isHopping ? this.smart_frog_hop : this.smart_frog_idle;
+    if (type === 'green_bug') return this.green_bug;
+    return this.maripoga_idle;
+  },
+
+  // Get fly sprite with wing animation frame
+  getFlySprite(type, wingFrame) {
+    if (type === 'speed_fly') return wingFrame ? this.speed_fly_1 : this.speed_fly_2;
+    if (type === 'invincible_fly') return wingFrame ? this.invincible_fly_1 : this.invincible_fly_2;
+    if (type === 'life_fly') return wingFrame ? this.life_fly_1 : this.life_fly_2;
+    return this.speed_fly_1;
+  },
+};
+
+  </script>
+  <!-- src/audio/audio.js -->
+  <script>
+// Chiptune audio engine using Web Audio API
+// NES-like: pulse (square) waves, triangle, noise
+const Audio = {
+  ctx: null,
+  enabled: false,
+  masterGain: null,
+  musicNodes: null, // For background music loop
+
+  init() {
+    // Create audio context on first user interaction
+    const startAudio = () => {
+      if (this.ctx) return;
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.value = 0.3;
+      this.masterGain.connect(this.ctx.destination);
+      this.enabled = true;
+      window.removeEventListener('keydown', startAudio);
+      window.removeEventListener('click', startAudio);
+    };
+    window.addEventListener('keydown', startAudio);
+    window.addEventListener('click', startAudio);
+  },
+
+  // Helper: play a note with envelope
+  playNote(freq, startTime, duration, type, volume = 0.15, attack = 0.01, release = 0.05) {
+    if (!this.enabled) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type || 'square';
+    osc.frequency.value = freq;
+
+    // ADSR envelope
+    gain.gain.value = 0;
+    gain.gain.linearRampToValueAtTime(volume, this.ctx.currentTime + startTime + attack);
+    gain.gain.linearRampToValueAtTime(volume * 0.7, this.ctx.currentTime + startTime + duration - release);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + startTime + duration);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(this.ctx.currentTime + startTime);
+    osc.stop(this.ctx.currentTime + startTime + duration);
+  },
+
+  // Helper: create noise buffer for percussion
+  createNoiseBuffer(duration) {
+    if (!this.enabled) return null;
+    const bufferSize = this.ctx.sampleRate * duration;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    return buffer;
+  },
+
+  // Helper: play noise burst
+  playNoise(startTime, duration, volume = 0.1) {
+    if (!this.enabled) return;
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = this.createNoiseBuffer(duration);
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 1000;
+
+    gain.gain.value = 0;
+    gain.gain.linearRampToValueAtTime(volume, this.ctx.currentTime + startTime + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + startTime + duration);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+    noise.start(this.ctx.currentTime + startTime);
+  },
+
+  // Quick bouncy hop - two rapid ascending notes
+  sfxHop() {
+    this.playNote(220, 0, 0.05, 'square', 0.12, 0.005, 0.02);
+    this.playNote(330, 0.04, 0.04, 'square', 0.1, 0.005, 0.02);
+  },
+
+  // Satisfying tile claim ping
+  sfxClaim(isEnemy = false) {
+    const freq = isEnemy ? 523 : 440; // Higher pitch for enemy tiles
+    this.playNote(freq, 0, 0.08, 'square', 0.15, 0.005, 0.03);
+    // Add subtle triangle for richness
+    this.playNote(freq * 2, 0.02, 0.06, 'triangle', 0.08, 0.005, 0.03);
+  },
+
+  // Victory jingle for capturing an enemy - 5 ascending notes
+  sfxCapture() {
+    const melody = [523, 587, 659, 784, 880]; // C5, D5, E5, G5, A5
+    const duration = 0.08;
+    melody.forEach((freq, i) => {
+      this.playNote(freq, i * duration, duration, 'square', 0.15, 0.005, 0.03);
+    });
+    // Add harmony on last note
+    this.playNote(1047, 4 * duration, duration * 1.5, 'triangle', 0.1, 0.01, 0.05);
+  },
+
+  // Sad descending chromatic death sound
+  sfxDeath() {
+    const notes = [440, 415, 392, 370, 349, 330, 311, 294]; // A4 down chromatically
+    const duration = 0.075;
+    notes.forEach((freq, i) => {
+      this.playNote(freq, i * duration, duration, 'square', 0.18, 0.005, 0.04);
+    });
+    // Low rumble at the end
+    this.playNote(110, 0.5, 0.2, 'triangle', 0.2, 0.01, 0.1);
+  },
+
+  // Celebratory wave clear fanfare
+  sfxWaveClear() {
+    const melody = [523, 587, 659, 698, 784, 880, 988, 1047]; // C major scale ascending
+    const duration = 0.1;
+    melody.forEach((freq, i) => {
+      this.playNote(freq, i * duration, duration, 'triangle', 0.18, 0.005, 0.04);
+      // Add square harmony
+      if (i >= 4) {
+        this.playNote(freq * 1.5, i * duration, duration, 'square', 0.1, 0.005, 0.04);
+      }
+    });
+  },
+
+  // Subtle enemy hop - lower pitch, quieter
+  sfxEnemyHop() {
+    this.playNote(165, 0, 0.04, 'square', 0.08, 0.005, 0.02);
+    this.playNote(220, 0.03, 0.035, 'square', 0.06, 0.005, 0.02);
+  },
+
+  // Progressive fill sounds - reward increases with fill size
+  sfxFillSmall() {
+    // 1-5 tiles: Quick 2-note chirp, slightly higher than claim
+    this.playNote(494, 0, 0.06, 'square', 0.14, 0.005, 0.025);
+    this.playNote(587, 0.04, 0.06, 'square', 0.13, 0.005, 0.025);
+  },
+
+  sfxFillMedium() {
+    // 6-15 tiles: 3-note ascending arpeggio, bright and satisfying
+    this.playNote(523, 0, 0.08, 'square', 0.16, 0.005, 0.03);
+    this.playNote(659, 0.06, 0.08, 'square', 0.15, 0.005, 0.03);
+    this.playNote(784, 0.12, 0.1, 'square', 0.14, 0.005, 0.04);
+    // Add triangle harmony on last note
+    this.playNote(1568, 0.12, 0.1, 'triangle', 0.08, 0.01, 0.04);
+  },
+
+  sfxFillLarge() {
+    // 16-30 tiles: 4-note fanfare with harmony, mini victory
+    const notes = [523, 659, 784, 880]; // C5, E5, G5, A5
+    const duration = 0.1;
+    notes.forEach((freq, i) => {
+      this.playNote(freq, i * duration * 0.7, duration, 'square', 0.17, 0.005, 0.04);
+      // Add harmony on last two notes
+      if (i >= 2) {
+        this.playNote(freq * 1.5, i * duration * 0.7, duration, 'triangle', 0.1, 0.01, 0.04);
+      }
+    });
+    // Bass note for impact
+    this.playNote(131, 0.21, 0.15, 'triangle', 0.15, 0.01, 0.06);
+  },
+
+  sfxFillHuge() {
+    // 31+ tiles: 6-note triumphant cascade with bass, very rewarding
+    const notes = [523, 659, 784, 880, 988, 1047]; // C5 to C6
+    const duration = 0.1;
+    notes.forEach((freq, i) => {
+      this.playNote(freq, i * duration * 0.65, duration, 'square', 0.18, 0.005, 0.04);
+      // Add rich harmony
+      if (i >= 3) {
+        this.playNote(freq * 1.5, i * duration * 0.65, duration, 'triangle', 0.11, 0.01, 0.04);
+      }
+    });
+    // Deep bass note for power
+    this.playNote(65.4, 0, 0.4, 'triangle', 0.2, 0.02, 0.15);
+    this.playNote(131, 0.2, 0.3, 'triangle', 0.18, 0.01, 0.12);
+  },
+
+  // Hurry up warning - urgent countdown feel
+  sfxHurryUp() {
+    // Rapid descending notes, repeated 3 times with increasing urgency
+    const pattern = [880, 784, 698]; // A5, G5, F5
+    for (let rep = 0; rep < 3; rep++) {
+      const offset = rep * 0.4;
+      const volume = 0.15 + rep * 0.03; // Get louder each time
+      pattern.forEach((freq, i) => {
+        this.playNote(freq, offset + i * 0.08, 0.08, 'square', volume, 0.005, 0.03);
+      });
+    }
+    // Final urgent accent
+    this.playNote(659, 1.2, 0.15, 'square', 0.22, 0.005, 0.06);
+    this.playNote(330, 1.2, 0.15, 'triangle', 0.18, 0.01, 0.06);
+  },
+
+  // Snail creeping sound - ominous and unsettling
+  sfxSnailMove() {
+    // Deep triangle wave with slow pitch bend downward
+    if (!this.enabled) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+
+    // Start at 110 Hz, bend down to 80 Hz
+    osc.frequency.setValueAtTime(110, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.2);
+
+    // Ominous envelope
+    gain.gain.value = 0;
+    gain.gain.linearRampToValueAtTime(0.15, this.ctx.currentTime + 0.02);
+    gain.gain.linearRampToValueAtTime(0.12, this.ctx.currentTime + 0.15);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(this.ctx.currentTime);
+    osc.stop(this.ctx.currentTime + 0.2);
+  },
+
+  // Perfect 100% bonus - grand celebration
+  sfxPerfect() {
+    // 8+ notes with major chord arpeggios, most rewarding sound
+    const melody = [
+      523, 659, 784, 880, 1047, 880, 784, 1047, 1319 // C major arpeggio cascade
+    ];
+    const duration = 0.12;
+
+    melody.forEach((freq, i) => {
+      this.playNote(freq, i * duration * 0.7, duration, 'square', 0.18, 0.005, 0.05);
+      // Rich harmonic accompaniment
+      if (i >= 2) {
+        this.playNote(freq * 1.5, i * duration * 0.7 + 0.02, duration, 'triangle', 0.12, 0.01, 0.05);
+      }
+    });
+
+    // Bass chord progression
+    this.playNote(65.4, 0, 0.8, 'triangle', 0.18, 0.02, 0.2);
+    this.playNote(131, 0.4, 0.6, 'triangle', 0.16, 0.01, 0.15);
+    this.playNote(196, 0.8, 0.5, 'triangle', 0.14, 0.01, 0.15);
+
+    // Final triumphant high note
+    this.playNote(1047, 0.9, 0.3, 'square', 0.2, 0.01, 0.1);
+    this.playNote(1568, 0.9, 0.3, 'triangle', 0.15, 0.01, 0.1);
+  },
+
+  // Combo stacking sound - pitch increases with multiplier
+  sfxCombo(multiplier) {
+    const baseFreq = 440; // A4
+    // x2 = 1.2x pitch, x3 = 1.4x, x4+ = 1.6x
+    const pitchMult = 1.0 + Math.min(multiplier - 1, 3) * 0.2;
+    const freq = baseFreq * pitchMult;
+
+    if (multiplier === 2) {
+      // Medium pitch, quick 2-note
+      this.playNote(freq, 0, 0.07, 'square', 0.15, 0.005, 0.03);
+      this.playNote(freq * 1.5, 0.05, 0.07, 'square', 0.14, 0.005, 0.03);
+    } else if (multiplier === 3) {
+      // High pitch, 3-note sparkle
+      this.playNote(freq, 0, 0.06, 'square', 0.16, 0.005, 0.025);
+      this.playNote(freq * 1.25, 0.04, 0.06, 'square', 0.15, 0.005, 0.025);
+      this.playNote(freq * 1.5, 0.08, 0.08, 'square', 0.14, 0.005, 0.03);
+      this.playNote(freq * 3, 0.08, 0.08, 'triangle', 0.09, 0.01, 0.03);
+    } else {
+      // x4+: Very high with extra sparkle notes
+      this.playNote(freq, 0, 0.06, 'square', 0.17, 0.005, 0.025);
+      this.playNote(freq * 1.33, 0.04, 0.06, 'square', 0.16, 0.005, 0.025);
+      this.playNote(freq * 1.67, 0.08, 0.06, 'square', 0.15, 0.005, 0.025);
+      this.playNote(freq * 2, 0.12, 0.1, 'square', 0.14, 0.005, 0.04);
+      // Extra sparkle harmonics
+      this.playNote(freq * 3, 0.08, 0.1, 'triangle', 0.1, 0.01, 0.04);
+      this.playNote(freq * 4, 0.12, 0.1, 'triangle', 0.08, 0.01, 0.04);
+    }
+  },
+
+  // Background music loop - upbeat arcade chiptune
+  startMusic() {
+    if (!this.enabled || this.musicNodes) return;
+
+    this.musicNodes = { playing: true, loopCount: 0 };
+
+    // 16-bar loop at 140 BPM
+    const bpm = 140;
+    const beatDuration = 60 / bpm;
+    const barDuration = beatDuration * 4;
+    const loopDuration = barDuration * 8; // 8 bars
+
+    const playLoop = () => {
+      if (!this.musicNodes || !this.musicNodes.playing) return;
+
+      const now = 0;
+      const variation = this.musicNodes.loopCount % 2; // Alternate between two variations
+
+      // Melody (square wave) - catchy arcade theme with variation
+      let melody;
+      if (variation === 0) {
+        // Original melody
+        melody = [
+          // Bar 1-2
+          { note: 659, time: 0, dur: 0.15 }, // E5
+          { note: 659, time: 0.25, dur: 0.15 },
+          { note: 784, time: 0.5, dur: 0.15 }, // G5
+          { note: 659, time: 0.75, dur: 0.15 },
+          { note: 523, time: 1.0, dur: 0.3 }, // C5
+          { note: 587, time: 1.5, dur: 0.15 }, // D5
+          { note: 659, time: 1.75, dur: 0.15 },
+          // Bar 3-4
+          { note: 784, time: 2.0, dur: 0.15 },
+          { note: 784, time: 2.25, dur: 0.15 },
+          { note: 880, time: 2.5, dur: 0.15 }, // A5
+          { note: 784, time: 2.75, dur: 0.15 },
+          { note: 659, time: 3.0, dur: 0.3 },
+          { note: 523, time: 3.5, dur: 0.15 },
+          { note: 587, time: 3.75, dur: 0.15 },
+          // Bar 5-6 (variation)
+          { note: 659, time: 4.0, dur: 0.15 },
+          { note: 659, time: 4.25, dur: 0.15 },
+          { note: 784, time: 4.5, dur: 0.15 },
+          { note: 880, time: 4.75, dur: 0.15 },
+          { note: 988, time: 5.0, dur: 0.3 }, // B5
+          { note: 880, time: 5.5, dur: 0.15 },
+          { note: 784, time: 5.75, dur: 0.15 },
+          // Bar 7-8 (resolution)
+          { note: 659, time: 6.0, dur: 0.15 },
+          { note: 784, time: 6.25, dur: 0.15 },
+          { note: 659, time: 6.5, dur: 0.15 },
+          { note: 587, time: 6.75, dur: 0.15 },
+          { note: 523, time: 7.0, dur: 0.5 }, // Long C5 ending
+        ];
+      } else {
+        // Variation with slightly different melody
+        melody = [
+          // Bar 1-2
+          { note: 523, time: 0, dur: 0.15 }, // C5
+          { note: 659, time: 0.25, dur: 0.15 }, // E5
+          { note: 784, time: 0.5, dur: 0.15 }, // G5
+          { note: 880, time: 0.75, dur: 0.15 }, // A5
+          { note: 784, time: 1.0, dur: 0.3 }, // G5
+          { note: 659, time: 1.5, dur: 0.15 }, // E5
+          { note: 587, time: 1.75, dur: 0.15 }, // D5
+          // Bar 3-4
+          { note: 523, time: 2.0, dur: 0.15 },
+          { note: 587, time: 2.25, dur: 0.15 },
+          { note: 659, time: 2.5, dur: 0.15 },
+          { note: 784, time: 2.75, dur: 0.15 },
+          { note: 880, time: 3.0, dur: 0.3 },
+          { note: 784, time: 3.5, dur: 0.15 },
+          { note: 659, time: 3.75, dur: 0.15 },
+          // Bar 5-6
+          { note: 784, time: 4.0, dur: 0.15 },
+          { note: 880, time: 4.25, dur: 0.15 },
+          { note: 988, time: 4.5, dur: 0.15 }, // B5
+          { note: 1047, time: 4.75, dur: 0.15 }, // C6
+          { note: 988, time: 5.0, dur: 0.3 },
+          { note: 880, time: 5.5, dur: 0.15 },
+          { note: 784, time: 5.75, dur: 0.15 },
+          // Bar 7-8 (resolution)
+          { note: 659, time: 6.0, dur: 0.15 },
+          { note: 587, time: 6.25, dur: 0.15 },
+          { note: 523, time: 6.5, dur: 0.15 },
+          { note: 587, time: 6.75, dur: 0.15 },
+          { note: 523, time: 7.0, dur: 0.5 }, // Long C5 ending
+        ];
+      }
+
+      melody.forEach(m => {
+        this.playNote(m.note, now + m.time, m.dur, 'square', 0.08, 0.01, 0.05);
+      });
+
+      // Bassline (triangle wave) - enhanced with more frequent notes
+      const bass = [
+        // Every beat now, not just every bar
+        { note: 131, time: 0, dur: 0.18 }, // C3
+        { note: 131, time: 0.5, dur: 0.18 },
+        { note: 131, time: 1.0, dur: 0.18 },
+        { note: 131, time: 1.5, dur: 0.18 },
+        { note: 147, time: 2.0, dur: 0.18 }, // D3
+        { note: 147, time: 2.5, dur: 0.18 },
+        { note: 147, time: 3.0, dur: 0.18 },
+        { note: 147, time: 3.5, dur: 0.18 },
+        { note: 131, time: 4.0, dur: 0.18 }, // C3
+        { note: 131, time: 4.5, dur: 0.18 },
+        { note: 175, time: 5.0, dur: 0.18 }, // F3
+        { note: 175, time: 5.5, dur: 0.18 },
+        { note: 196, time: 6.0, dur: 0.18 }, // G3
+        { note: 196, time: 6.5, dur: 0.18 },
+        { note: 131, time: 7.0, dur: 0.18 }, // C3
+        { note: 131, time: 7.5, dur: 0.18 },
+      ];
+
+      bass.forEach(b => {
+        this.playNote(b.note, now + b.time, b.dur, 'triangle', 0.12, 0.005, 0.05);
+      });
+
+      // Hi-hat rhythm (noise) - eighth notes
+      for (let i = 0; i < 32; i++) {
+        const accent = i % 4 === 0 ? 0.06 : 0.03;
+        this.playNoise(now + i * 0.25, 0.03, accent);
+      }
+
+      // Increment loop counter and schedule next loop
+      this.musicNodes.loopCount++;
+      setTimeout(() => playLoop(), loopDuration * 1000);
+    };
+
+    playLoop();
+  },
+
+  stopMusic() {
+    if (this.musicNodes) {
+      this.musicNodes.playing = false;
+      this.musicNodes = null;
+    }
+  },
+
+  // Placeholder for hurry up sound (to be implemented by Audio V5)
+  sfxHurryUp() {
+    // Basic hurry up warning sound
+    this.playNote(880, 0, 0.2, 'square', 0.2, 0.01, 0.05);
+    this.playNote(880, 0.25, 0.2, 'square', 0.2, 0.01, 0.05);
+    this.playNote(880, 0.5, 0.3, 'square', 0.25, 0.01, 0.1);
+  },
+
+  // Placeholder for perfect fill sound (to be implemented by Audio V5)
+  sfxPerfect() {
+    // Triumphant perfect sound
+    const melody = [523, 659, 784, 1047]; // C, E, G, high C
+    melody.forEach((freq, i) => {
+      this.playNote(freq, i * 0.1, 0.2, 'square', 0.2, 0.01, 0.08);
+      this.playNote(freq * 1.5, i * 0.1 + 0.05, 0.15, 'triangle', 0.15, 0.01, 0.06);
+    });
+  },
+
+  // Snake slither sound - low hissing slide
+  sfxSnakeMove() {
+    if (!this.enabled) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    // Sliding pitch from 200 down to 120
+    osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.15);
+    gain.gain.value = 0;
+    gain.gain.linearRampToValueAtTime(0.06, this.ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(this.ctx.currentTime);
+    osc.stop(this.ctx.currentTime + 0.15);
+    // Add hiss noise
+    this.playNoise(0, 0.1, 0.04);
+  },
+
+  // Ladybug squish - satisfying pop
+  sfxLadybugSquish() {
+    this.playNote(392, 0, 0.06, 'square', 0.15, 0.005, 0.02);
+    this.playNote(523, 0.04, 0.08, 'triangle', 0.12, 0.005, 0.03);
+    this.playNoise(0, 0.05, 0.08);
+  },
+
+  // Enemy deploy sound - ominous spawn
+  sfxEnemyDeploy() {
+    this.playNote(110, 0, 0.12, 'triangle', 0.15, 0.01, 0.05);
+    this.playNote(165, 0.08, 0.1, 'square', 0.1, 0.005, 0.04);
+  },
+
+  // Enemy encirclement danger sound - alarm
+  sfxEnemyEncircle() {
+    this.playNote(440, 0, 0.1, 'square', 0.2, 0.005, 0.04);
+    this.playNote(330, 0.08, 0.1, 'square', 0.2, 0.005, 0.04);
+    this.playNote(440, 0.16, 0.1, 'square', 0.2, 0.005, 0.04);
+  },
+
+  // === BONUS ITEM SOUNDS ===
+
+  // General bonus pickup - short happy chirp
+  sfxBonusPickup() {
+    this.playNote(659, 0, 0.06, 'square', 0.14, 0.005, 0.025);
+    this.playNote(880, 0.05, 0.08, 'square', 0.13, 0.005, 0.03);
+    this.playNote(1047, 0.1, 0.1, 'triangle', 0.1, 0.01, 0.04);
+  },
+
+  // Speed boost whoosh - quick ascending sweep
+  sfxSpeedBoost() {
+    // Rapid ascending arpeggio with triangle whoosh
+    this.playNote(523, 0, 0.05, 'square', 0.14, 0.005, 0.02);
+    this.playNote(659, 0.04, 0.05, 'square', 0.13, 0.005, 0.02);
+    this.playNote(784, 0.08, 0.05, 'square', 0.12, 0.005, 0.02);
+    this.playNote(1047, 0.12, 0.1, 'square', 0.15, 0.005, 0.04);
+    // Whoosh overlay
+    this.playNote(262, 0, 0.2, 'triangle', 0.12, 0.01, 0.08);
+  },
+
+  // Invincibility power-up chime - majestic ascending chord
+  sfxInvincibleStart() {
+    const melody = [523, 659, 784, 880, 1047]; // C5 major ascending
+    melody.forEach((freq, i) => {
+      this.playNote(freq, i * 0.08, 0.12, 'square', 0.16, 0.005, 0.04);
+    });
+    // Power chord at the end
+    this.playNote(523, 0.35, 0.25, 'triangle', 0.14, 0.01, 0.08);
+    this.playNote(1047, 0.35, 0.25, 'square', 0.12, 0.01, 0.08);
+    this.playNote(1568, 0.35, 0.25, 'triangle', 0.08, 0.01, 0.08);
+  },
+
+  // Extra life - triumphant fanfare
+  sfxExtraLife() {
+    // Triumphant 1UP jingle
+    const melody = [523, 659, 784, 1047, 784, 1047, 1319]; // C major arpeggio up
+    const dur = 0.1;
+    melody.forEach((freq, i) => {
+      this.playNote(freq, i * dur * 0.7, dur, 'square', 0.18, 0.005, 0.04);
+      if (i >= 3) {
+        this.playNote(freq * 1.5, i * dur * 0.7 + 0.02, dur, 'triangle', 0.12, 0.01, 0.04);
+      }
+    });
+    // Big bass note for impact
+    this.playNote(131, 0, 0.6, 'triangle', 0.16, 0.02, 0.15);
+    // Sparkle finish
+    this.playNote(1568, 0.5, 0.2, 'square', 0.1, 0.01, 0.08);
+    this.playNote(2093, 0.55, 0.2, 'triangle', 0.08, 0.01, 0.08);
+  },
+};
+
+  </script>
+  <!-- src/gameplay/decoration.js -->
+  <script>
+// Scenic decoration for the game board - reed wall (top) and lily pad edge (bottom)
+// Row 0 = reed wall under HUD, Row 13 = lily pad border at bottom
+// Architect waves (every 10th) get cityscape + highway fence instead
+const Decoration = {
+  reeds: [],
+  lilyPads: [],
+  buildings: [],
+
+  init() {
+    this._generateReeds();
+    this._generateLilyPads();
+    this._generateCityscape();
+  },
+
+  // Generate reed data — slightly less dense, brown+green, varied heights, some angled
+  // Approved: v4 Option C — spacing ~3-4px, 2px water strip at bottom
+  _generateReeds() {
+    this.reeds = [];
+    let seed = 42;
+    const rand = () => { seed = (seed * 16807) % 2147483647; return (seed & 0x7fffffff) / 2147483647; };
+
+    let x = 1;
+    while (x < 255) {
+      const h = 6 + Math.floor(rand() * 9); // 6-14px tall
+      const isBrown = rand() < 0.4; // 40% brown, 60% green
+      let angle = 0;
+      const aRoll = rand();
+      if (aRoll < 0.15) angle = -1;
+      else if (aRoll < 0.30) angle = 1;
+
+      this.reeds.push({ x, h, isBrown, angle });
+
+      // Spacing: 3 + 0-1 jitter
+      x += 3 + Math.floor(rand() * 2);
+    }
+  },
+
+  // Generate lily pad layout — repeating 32px pattern: 1 sheared heart + 2 small ovals
+  // Approved: v5 Option A — sheared hearts + normal ovals, diagonal layout
+  _generateLilyPads() {
+    this.lilyPads = [];
+    for (let u = 0; u < 8; u++) {
+      const bx = u * 32;
+      const isEven = u % 2 === 0;
+
+      // Sheared heart in left tile
+      this.lilyPads.push({
+        type: 'heart',
+        x: bx + 2,
+        y: 224 + 4 + (isEven ? -1 : 1),
+      });
+
+      // Upper-left oval in right tile
+      this.lilyPads.push({
+        type: 'oval',
+        x: bx + 16 + 2,
+        y: 224 + 1 + (isEven ? 0 : 1),
+      });
+
+      // Lower-right oval — nudged up 1px on even patterns
+      this.lilyPads.push({
+        type: 'oval',
+        x: bx + 16 + 8,
+        y: 224 + 9 + (isEven ? -1 : 0),
+      });
+    }
+  },
+
+  // Draw reeds (behind game tiles, in row 0 area)
+  // Architect waves draw cityscape silhouette instead
+  drawReeds() {
+    if (Waves.isArchitectWave) {
+      this._drawCityscape();
+      return;
+    }
+
+    // Dynamic sky background for reed row (blue daytime, dark nighttime)
+    const reedBg = Waves.skyDarkColor || '#080b12';
+    Renderer.fillRect(0, 16, SCREEN_WIDTH, 14, reedBg);
+
+    // 2px water strip at bottom of reed row (y=30-31) — lighter blue in daytime
+    const waterBg = Waves.waterColor || PALETTE.WATER_BG;
+    Renderer.fillRect(0, 30, SCREEN_WIDTH, 2, waterBg);
+
+    // Draw twinkling stars in reed area during nighttime (behind reeds)
+    if (Waves.isNighttime && Waves.stars.length > 0) {
+      const now = performance.now();
+      for (const star of Waves.stars) {
+        // Stars in reed area only (y 16-29)
+        if (star.y >= 16 && star.y < 30) {
+          if (!star.twinkle || Math.floor(now / 500) % 2 === 0) {
+            Renderer.fillRect(star.x, star.y, 1, 1, PALETTE.WHITE);
+          }
+        }
+      }
+    }
+
+    // Draw each reed — base at y=29 (above water strip), grows upward
+    for (const reed of this.reeds) {
+      this._drawReed(reed.x, 29, reed.h, reed.isBrown, reed.angle);
+    }
+  },
+
+  // Draw lily pad edge (row 13, below game tiles)
+  // Architect waves draw highway fence instead
+  drawLilyPads() {
+    if (Waves.isArchitectWave) {
+      this._drawHighwayFence();
+      return;
+    }
+
+    // Water background behind lily pads — changes with day/night
+    const lilyWaterBg = Waves.waterColor || PALETTE.WATER_BG;
+    Renderer.fillRect(0, 224, SCREEN_WIDTH, 16, lilyWaterBg);
+
+    for (const pad of this.lilyPads) {
+      if (pad.type === 'heart') {
+        this._drawShearedHeart(pad.x, pad.y);
+      } else {
+        this._drawSmallOval(pad.x, pad.y);
+      }
+    }
+  },
+
+  // Full draw call (both layers)
+  draw() {
+    this.drawReeds();
+    this.drawLilyPads();
+  },
+
+  // Generate cityscape building data for architect waves
+  _generateCityscape() {
+    this.buildings = [];
+    let seed = 137;
+    const rand = () => { seed = (seed * 16807) % 2147483647; return (seed & 0x7fffffff) / 2147483647; };
+
+    let x = 0;
+    while (x < 256) {
+      const w = 3 + Math.floor(rand() * 6); // 3-8px wide
+      const h = 6 + Math.floor(rand() * 9); // 6-14px tall
+      const hasAntenna = rand() < 0.25;
+      const windows = [];
+      // Generate random window positions
+      for (let wy = 2; wy < h - 1; wy += 3) {
+        for (let wx = 1; wx < w - 1; wx += 2) {
+          if (rand() < 0.4) { // 40% chance of lit window
+            windows.push({ x: wx, y: wy });
+          }
+        }
+      }
+      this.buildings.push({ x, w, h, hasAntenna, windows });
+      x += w + 1; // 1px gap between buildings
+    }
+  },
+
+  // Draw cityscape silhouette (replaces reeds for architect waves)
+  _drawCityscape() {
+    // Dark purple dusk background
+    Renderer.fillRect(0, 16, SCREEN_WIDTH, 14, '#2a1a3a');
+    // Dark road/canal at bottom
+    Renderer.fillRect(0, 30, SCREEN_WIDTH, 2, '#1a1a2a');
+
+    for (const b of this.buildings) {
+      const baseY = 29; // Same as reed base
+      const topY = baseY - b.h + 1;
+      // Building body
+      Renderer.fillRect(b.x, topY, b.w, b.h, '#2a2a3a');
+      // Building edge highlight (left side)
+      Renderer.fillRect(b.x, topY, 1, b.h, '#353545');
+      // Antenna
+      if (b.hasAntenna) {
+        const ax = b.x + Math.floor(b.w / 2);
+        Renderer.fillRect(ax, topY - 2, 1, 2, '#505060');
+      }
+      // Lit windows
+      for (const win of b.windows) {
+        Renderer.fillRect(b.x + win.x, topY + win.y, 1, 1, '#ffd700');
+      }
+    }
+  },
+
+  // Draw highway fence (replaces lily pads for architect waves)
+  _drawHighwayFence() {
+    // Asphalt background
+    Renderer.fillRect(0, 224, SCREEN_WIDTH, 16, '#1a1a2a');
+    // Road markings (dashed center line)
+    for (let x = 2; x < 256; x += 12) {
+      Renderer.fillRect(x, 231, 6, 1, '#555555');
+    }
+    // Fence posts every 16px
+    for (let x = 0; x < 256; x += 16) {
+      // Vertical post
+      Renderer.fillRect(x + 2, 225, 1, 10, '#808080');
+      // Post cap
+      Renderer.fillRect(x + 1, 224, 3, 1, '#909090');
+    }
+    // Horizontal rails
+    Renderer.fillRect(0, 227, SCREEN_WIDTH, 1, '#606060');
+    Renderer.fillRect(0, 232, SCREEN_WIDTH, 1, '#606060');
+    // Chain-link pattern (diagonal lines between posts)
+    for (let x = 0; x < 256; x += 16) {
+      for (let i = 0; i < 12; i += 2) {
+        // Diagonal down-right
+        const px = x + 3 + i;
+        const py1 = 228 + Math.floor(i / 3);
+        if (px < 256) Renderer.fillRect(px, py1, 1, 1, '#505050');
+        // Diagonal up-right
+        const py2 = 231 - Math.floor(i / 3);
+        if (px < 256) Renderer.fillRect(px, py2, 1, 1, '#505050');
+      }
+    }
+  },
+
+  // Draw a single reed stem, growing upward from baseY
+  _drawReed(baseX, baseY, height, isBrown, angle) {
+    const color = isBrown ? PALETTE.REED_BROWN : PALETTE.REED_GREEN;
+    const topY = baseY - height + 1;
+
+    for (let i = 0; i < height; i++) {
+      let xOff = 0;
+      if (angle !== 0) {
+        xOff = Math.floor(i / 4) * angle;
+      }
+      Renderer.fillRect(baseX + xOff, topY + i, 1, 1, color);
+    }
+  },
+
+  // Sheared heart lily pad (12x7) — top shifts left 1, bottom rows shift right 1-2
+  // Per-row x offsets for shear effect (false perspective)
+  _heartShearOffsets: [-1, 0, 0, 0, 0, 1, 2],
+  _heartShape: [
+    [0,0,0,1,1,0,0,1,1,0,0,0],
+    [0,0,1,1,1,1,1,1,1,1,0,0],
+    [0,1,1,1,1,1,1,1,1,1,1,0],
+    [0,1,1,1,1,1,1,1,1,1,1,0],
+    [0,1,1,1,1,1,1,1,1,1,1,0],
+    [0,0,1,1,1,1,1,1,1,1,0,0],
+    [0,0,0,0,1,1,1,1,0,0,0,0],
+  ],
+
+  _drawShearedHeart(ox, oy) {
+    const shape = this._heartShape;
+    const offsets = this._heartShearOffsets;
+    const color = PALETTE.GREEN_DARK;
+    const hi = PALETTE.GREEN_MID;
+
+    for (let r = 0; r < shape.length; r++) {
+      const xo = offsets[r];
+      for (let c = 0; c < shape[r].length; c++) {
+        if (shape[r][c]) {
+          Renderer.fillRect(ox + c + xo, oy + r, 1, 1, color);
+        }
+      }
+    }
+    // Highlight on left edge
+    Renderer.fillRect(ox + 2 + offsets[1], oy + 1, 1, 1, hi);
+    Renderer.fillRect(ox + 1 + offsets[2], oy + 2, 1, 1, hi);
+    Renderer.fillRect(ox + 1 + offsets[3], oy + 3, 1, 1, hi);
+  },
+
+  // Small oval lily pad (6x4)
+  _ovalShape: [
+    [0,1,1,1,1,0],
+    [1,1,1,1,1,1],
+    [1,1,1,1,1,1],
+    [0,1,1,1,1,0],
+  ],
+
+  _drawSmallOval(ox, oy) {
+    const shape = this._ovalShape;
+    const color = PALETTE.GREEN_DARK;
+    const hi = PALETTE.GREEN_MID;
+
+    for (let r = 0; r < shape.length; r++) {
+      for (let c = 0; c < shape[r].length; c++) {
+        if (shape[r][c]) {
+          Renderer.fillRect(ox + c, oy + r, 1, 1, color);
+        }
+      }
+    }
+    // Highlight
+    Renderer.fillRect(ox + 1, oy + 1, 1, 1, hi);
+  },
+};
+
+  </script>
+  <!-- src/gameplay/player.js -->
+  <script>
+// Player (Maripoga) - movement, hopping, tile claiming
+const Player = {
+  col: 0,
+  row: 0,
+  isHopping: false,
+  hopTimer: 0,
+  hopFromCol: 0,
+  hopFromRow: 0,
+  lives: 3,
+  score: 0,
+  alive: true,
+  invincible: false,
+  invincibilityTimer: 0,
+
+  init() {
+    // Start at center of grid
+    this.col = Math.floor(GRID_COLS / 2);
+    this.row = Math.floor(GRID_ROWS / 2);
+    this.isHopping = false;
+    this.hopTimer = 0;
+    this.alive = true;
+    // Claim starting tile
+    Grid.set(this.col, this.row, TILE_GREEN);
+  },
+
+  reset() {
+    this.col = Math.floor(GRID_COLS / 2);
+    this.row = Math.floor(GRID_ROWS / 2);
+    this.isHopping = false;
+    this.hopTimer = 0;
+    this.alive = true;
+    this.invincible = true;
+    this.invincibilityTimer = 1500; // 1.5 seconds of invincibility
+    // Claim starting tile
+    Grid.set(this.col, this.row, TILE_GREEN);
+  },
+
+  update(dt) {
+    if (!this.alive) return;
+
+    // Update invincibility timer
+    if (this.invincible) {
+      this.invincibilityTimer -= dt;
+      if (this.invincibilityTimer <= 0) {
+        this.invincible = false;
+        this.invincibilityTimer = 0;
+      }
+    }
+
+    if (this.isHopping) {
+      this.hopTimer -= dt;
+      if (this.hopTimer <= 0) {
+        this.isHopping = false;
+        // Check if landed on spike — instant death!
+        const landedTile = Grid.get(this.col, this.row);
+        if (landedTile === TILE_SPIKE) {
+          this.die();
+          return;
+        }
+        // Zombie tiles: first hop reverts to neutral, second hop claims green
+        if (landedTile === TILE_ZOMBIE) {
+          Grid.set(this.col, this.row, TILE_NEUTRAL);
+          Audio.sfxClaim(true); // Use enemy claim sound for distinct feedback
+          Encircle.checkAll();
+          return;
+        }
+        // Check for ladybug stomp on landing (3B)
+        const stompTarget = Enemies.checkPlayerStompAt(this.col, this.row);
+        if (stompTarget) {
+          Enemies.stompEnemy(stompTarget);
+        }
+        // Claim tile on landing
+        const oldTile = landedTile;
+        Grid.set(this.col, this.row, TILE_GREEN);
+        // Award points for NEW tiles only (not re-claiming green)
+        if (oldTile !== TILE_GREEN) {
+          const isEnemy = oldTile === TILE_RED || oldTile === TILE_PURPLE || oldTile === TILE_BLUE || oldTile === TILE_SMART;
+          this.addScore(1);
+          Audio.sfxClaim(isEnemy);
+        }
+        // Check for bonus item pickup on landing
+        if (typeof Bonuses !== 'undefined') {
+          Bonuses.checkPlayerPickup(this.col, this.row);
+        }
+        // Check for encirclement after claiming
+        Encircle.checkAll();
+      }
+      return;
+    }
+
+    // Read input
+    const dir = Input.getDirection();
+    if (dir !== DIR_NONE) {
+      const newCol = this.col + DIR_DX[dir];
+      const newRow = this.row + DIR_DY[dir];
+      if (Grid.inBounds(newCol, newRow)) {
+        const tile = Grid.get(newCol, newRow);
+        // Spike tiles are deadly — can hop onto them but die on landing
+        // Water tiles block movement; zombie tiles allow entry (cleared on landing)
+        if (tile !== TILE_WATER) {
+          this.hopFromCol = this.col;
+          this.hopFromRow = this.row;
+          this.col = newCol;
+          this.row = newRow;
+          this.isHopping = true;
+          // Use speed boost duration if active
+          this.hopTimer = (typeof Bonuses !== 'undefined') ? Bonuses.getPlayerHopDuration() : HOP_DURATION;
+          Audio.sfxHop();
+        }
+      }
+    }
+  },
+
+  // Get pixel position (interpolated during hop)
+  getPixelPos() {
+    const targetX = this.col * TILE_SIZE;
+    const targetY = (this.row + GRID_OFFSET_Y) * TILE_SIZE; // + GRID_OFFSET_Y for grid offset
+    if (this.isHopping) {
+      const hopDur = (typeof Bonuses !== 'undefined') ? Bonuses.getPlayerHopDuration() : HOP_DURATION;
+      const t = 1 - (this.hopTimer / hopDur);
+      const fromX = this.hopFromCol * TILE_SIZE;
+      const fromY = (this.hopFromRow + GRID_OFFSET_Y) * TILE_SIZE;
+      // Arc: lerp position with a vertical bounce
+      const x = fromX + (targetX - fromX) * t;
+      const baseY = fromY + (targetY - fromY) * t;
+      const arc = -Math.sin(t * Math.PI) * 8; // 8px arc height
+      return { x, y: baseY + arc };
+    }
+    return { x: targetX, y: targetY };
+  },
+
+  draw() {
+    const pos = this.getPixelPos();
+    // Blink during invincibility (4 blinks per second)
+    if (this.invincible && Math.floor(this.invincibilityTimer / 125) % 2) {
+      return; // Skip drawing to create blink effect
+    }
+    const sprite = Sprites.getSprite('player', this.isHopping);
+    Renderer.drawSprite(sprite, pos.x, pos.y);
+  },
+
+  die() {
+    if (!this.alive) return; // Prevent double-death
+    this.alive = false;
+    this.lives--;
+    this.justDied = true; // Flag for main loop to pick up
+    Audio.sfxDeath();
+  },
+
+  addScore(points) {
+    const oldScore = this.score;
+    this.score += points;
+    // Extra life every 50000 points
+    if (Math.floor(this.score / 50000) > Math.floor(oldScore / 50000)) {
+      this.lives++;
+    }
+  },
+};
+
+  </script>
+  <!-- src/gameplay/enemies.js -->
+  <script>
+// Enemy frog system - with snake, ladybug, smart frog, and deployment queue
+const Enemies = {
+  list: [],
+
+  // Deployment queue system (3C)
+  deploymentQueue: [],  // {type, col, row, deployed: bool}
+  deployTimer: 0,
+  DEPLOY_INTERVAL: 8000,   // ms between deployments
+  RESPAWN_DELAY: 18000,    // ms before killed enemy can respawn
+  respawnQueue: [],         // {type, timer}
+
+  init() {
+    this.list = [];
+    this.deploymentQueue = [];
+    this.deployTimer = 0;
+    this.respawnQueue = [];
+  },
+
+  // Spawn an enemy frog of given type at given position (immediately on field)
+  spawn(type, col, row) {
+    const tileState = type === 'red' ? TILE_RED :
+                     type === 'purple' ? TILE_PURPLE :
+                     type === 'blue' ? TILE_BLUE :
+                     type === 'zombie' ? TILE_ZOMBIE :
+                     type === 'smart' ? TILE_SMART :
+                     type === 'snake' ? null :    // Snake doesn't affect tiles
+                     type === 'ladybug' ? null :  // Ladybug resets tiles, doesn't claim
+                     TILE_SNAIL;
+    const moveInterval = type === 'red' ? 800 :
+                        type === 'purple' ? 500 :
+                        type === 'zombie' ? 700 :
+                        type === 'snail' ? 1500 :
+                        type === 'snake' ? 600 :
+                        type === 'ladybug' ? 1200 :
+                        type === 'smart' ? 700 : 700;
+    this.list.push({
+      type,
+      col,
+      row,
+      tileState,
+      isHopping: false,
+      hopTimer: 0,
+      hopFromCol: col,
+      hopFromRow: row,
+      moveInterval: moveInterval,
+      moveCooldown: Math.random() * 500 + 300, // stagger initial moves
+      teleportTimer: type === 'blue' ? 5000 : 0,
+      alive: true,
+      doubleHopChance: type === 'purple' ? 0.3 : 0,
+      doubleHopQueued: false,
+      // Snake: queue second move in same direction
+      snakeDir: -1,
+      snakeSecondMove: false,
+    });
+    // Claim starting tile (snails convert tiles to spike, zombies use gray)
+    if (type === 'snail') {
+      Grid.set(col, row, TILE_SPIKE);
+    } else if (type === 'snake' || type === 'ladybug') {
+      // Snake doesn't claim tiles, ladybug resets tile on landing
+      if (type === 'ladybug') {
+        Grid.set(col, row, TILE_NEUTRAL);
+      }
+    } else if (tileState !== null) {
+      Grid.set(col, row, tileState);
+    }
+
+    if (Audio.sfxEnemyDeploy) Audio.sfxEnemyDeploy();
+  },
+
+  // Queue an enemy for later deployment (3C deployment system)
+  queueEnemy(type, col, row) {
+    this.deploymentQueue.push({ type, col, row });
+  },
+
+  // Deploy the next enemy from the queue
+  _deployNext() {
+    if (this.deploymentQueue.length === 0) return;
+    const entry = this.deploymentQueue.shift();
+    this.spawn(entry.type, entry.col, entry.row);
+  },
+
+  update(dt) {
+    // Tick deployment timer (3C)
+    if (this.deploymentQueue.length > 0) {
+      this.deployTimer -= dt;
+      if (this.deployTimer <= 0) {
+        this._deployNext();
+        this.deployTimer = this.DEPLOY_INTERVAL;
+      }
+    }
+
+    // Tick respawn timers (3C)
+    for (let i = this.respawnQueue.length - 1; i >= 0; i--) {
+      this.respawnQueue[i].timer -= dt;
+      if (this.respawnQueue[i].timer <= 0) {
+        const entry = this.respawnQueue.splice(i, 1)[0];
+        // Re-queue for deployment at a random edge position
+        const edge = Math.floor(Math.random() * 4);
+        let col, row;
+        if (edge === 0) { col = Math.floor(Math.random() * GRID_COLS); row = 0; }
+        else if (edge === 1) { col = GRID_COLS - 1; row = Math.floor(Math.random() * GRID_ROWS); }
+        else if (edge === 2) { col = Math.floor(Math.random() * GRID_COLS); row = GRID_ROWS - 1; }
+        else { col = 0; row = Math.floor(Math.random() * GRID_ROWS); }
+        this.queueEnemy(entry.type, col, row);
+      }
+    }
+
+    for (const enemy of this.list) {
+      if (!enemy.alive) continue;
+
+      // Handle hopping/moving animation
+      if (enemy.isHopping) {
+        enemy.hopTimer -= dt;
+        if (enemy.hopTimer <= 0) {
+          enemy.isHopping = false;
+
+          // On landing behavior per type
+          if (enemy.type === 'snail') {
+            Grid.set(enemy.col, enemy.row, TILE_SPIKE);
+            if (Audio.sfxSnailMove) Audio.sfxSnailMove();
+          } else if (enemy.type === 'snake') {
+            // Snake does NOT set tile state on landing
+            if (Audio.sfxSnakeMove) Audio.sfxSnakeMove();
+            // Snake moves 2 tiles: if first move done, queue second
+            if (enemy.snakeSecondMove) {
+              enemy.snakeSecondMove = false;
+            } else {
+              // Queue immediate second move in same direction
+              enemy.snakeSecondMove = true;
+              enemy.moveCooldown = 0; // Immediately move again
+            }
+          } else if (enemy.type === 'ladybug') {
+            // Ladybug resets tile to TILE_NEUTRAL
+            Grid.set(enemy.col, enemy.row, TILE_NEUTRAL);
+          } else if (enemy.tileState !== null) {
+            // -1 point when enemy reclaims a green tile
+            if (Grid.get(enemy.col, enemy.row) === TILE_GREEN) {
+              Player.addScore(-1);
+            }
+            Grid.set(enemy.col, enemy.row, enemy.tileState);
+          }
+        }
+        continue;
+      }
+
+      // Movement cooldown
+      enemy.moveCooldown -= dt;
+      if (enemy.moveCooldown > 0) continue;
+      enemy.moveCooldown = enemy.moveInterval + (Math.random() * 200 - 100);
+
+      // Blue frog teleport
+      if (enemy.type === 'blue') {
+        enemy.teleportTimer -= enemy.moveInterval;
+        if (enemy.teleportTimer <= 0) {
+          enemy.teleportTimer = 5000;
+          const newCol = Math.floor(Math.random() * GRID_COLS);
+          const newRow = Math.floor(Math.random() * GRID_ROWS);
+          if (Grid.inBounds(newCol, newRow)) {
+            enemy.hopFromCol = enemy.col;
+            enemy.hopFromRow = enemy.row;
+            enemy.col = newCol;
+            enemy.row = newRow;
+            enemy.isHopping = true;
+            enemy.hopTimer = HOP_DURATION;
+            Audio.sfxEnemyHop();
+            continue;
+          }
+        }
+      }
+
+      // Check for queued double hop (purple)
+      if (enemy.doubleHopQueued) {
+        enemy.doubleHopQueued = false;
+        enemy.moveCooldown = 0;
+      }
+
+      // Choose direction based on enemy type
+      let dir;
+      if (enemy.type === 'purple') {
+        dir = this._chaseDirection(enemy);
+      } else if (enemy.type === 'smart') {
+        dir = this._smartDirection(enemy);
+      } else if (enemy.type === 'snake' && enemy.snakeSecondMove) {
+        // Snake second move: same direction as first
+        dir = enemy.snakeDir;
+      } else {
+        // Random movement (red, snail, ladybug, snake first move, zombie)
+        dir = Math.floor(Math.random() * 4);
+      }
+
+      // Snake: remember direction for second move
+      if (enemy.type === 'snake' && !enemy.snakeSecondMove) {
+        enemy.snakeDir = dir;
+      }
+
+      const newCol = enemy.col + DIR_DX[dir];
+      const newRow = enemy.row + DIR_DY[dir];
+
+      if (Grid.inBounds(newCol, newRow)) {
+        const tile = Grid.get(newCol, newRow);
+        // Determine if enemy can move to this tile
+        const canMoveAnywhere = enemy.type === 'snail' || enemy.type === 'ladybug';
+        const canMove = canMoveAnywhere || (tile !== TILE_SPIKE && tile !== TILE_WATER);
+        if (canMove) {
+          enemy.hopFromCol = enemy.col;
+          enemy.hopFromRow = enemy.row;
+          enemy.col = newCol;
+          enemy.row = newRow;
+          enemy.isHopping = true;
+          enemy.hopTimer = HOP_DURATION;
+
+          // Snails convert tiles to spike immediately on hop start
+          if (enemy.type === 'snail') {
+            Grid.set(newCol, newRow, TILE_SPIKE);
+          }
+
+          Audio.sfxEnemyHop();
+
+          // Purple frogs: chance to hop twice
+          if (enemy.type === 'purple' && Math.random() < enemy.doubleHopChance && !enemy.doubleHopQueued) {
+            enemy.doubleHopQueued = true;
+          }
+        } else if (enemy.type === 'snake' && enemy.snakeSecondMove) {
+          // Snake blocked on second move: just skip it
+          enemy.snakeSecondMove = false;
+        }
+      } else if (enemy.type === 'snake' && enemy.snakeSecondMove) {
+        // Snake out of bounds on second move: skip
+        enemy.snakeSecondMove = false;
+      }
+    }
+  },
+
+  // Chase player direction (purple frog)
+  _chaseDirection(enemy) {
+    const dx = Player.col - enemy.col;
+    const dy = Player.row - enemy.row;
+    if (Math.random() < 0.08) return Math.floor(Math.random() * 4);
+    if (Math.abs(dx) > Math.abs(dy)) {
+      return dx > 0 ? DIR_RIGHT : DIR_LEFT;
+    } else {
+      return dy > 0 ? DIR_DOWN : DIR_UP;
+    }
+  },
+
+  // Smart frog AI: tries to move to cut off and surround the player (4B)
+  _smartDirection(enemy) {
+    // 15% random for unpredictability
+    if (Math.random() < 0.15) return Math.floor(Math.random() * 4);
+
+    const dx = Player.col - enemy.col;
+    const dy = Player.row - enemy.row;
+    const dist = Math.abs(dx) + Math.abs(dy);
+
+    // If far from player, chase like purple
+    if (dist > 6) {
+      if (Math.abs(dx) > Math.abs(dy)) {
+        return dx > 0 ? DIR_RIGHT : DIR_LEFT;
+      } else {
+        return dy > 0 ? DIR_DOWN : DIR_UP;
+      }
+    }
+
+    // When close, try to get ahead of the player
+    // Anticipate player movement: target a position offset from the player
+    // Pick a target 3 tiles ahead of where the player might go
+    let targetCol = Player.col;
+    let targetRow = Player.row;
+
+    // Simple prediction: move to flank the player
+    // Try to get to the opposite side of where the smart frog currently is
+    if (Math.abs(dx) < Math.abs(dy)) {
+      // Frog is more vertical — try to close horizontal gap
+      targetCol = Player.col + (dx > 0 ? -3 : 3);
+      targetRow = Player.row;
+    } else {
+      // Frog is more horizontal — try to close vertical gap
+      targetCol = Player.col;
+      targetRow = Player.row + (dy > 0 ? -3 : 3);
+    }
+
+    // Move toward the target
+    const tdx = targetCol - enemy.col;
+    const tdy = targetRow - enemy.row;
+
+    if (Math.abs(tdx) > Math.abs(tdy)) {
+      return tdx > 0 ? DIR_RIGHT : DIR_LEFT;
+    } else if (tdy !== 0) {
+      return tdy > 0 ? DIR_DOWN : DIR_UP;
+    } else {
+      // Already at target, chase directly
+      if (dx !== 0) return dx > 0 ? DIR_RIGHT : DIR_LEFT;
+      if (dy !== 0) return dy > 0 ? DIR_DOWN : DIR_UP;
+      return Math.floor(Math.random() * 4);
+    }
+  },
+
+  draw() {
+    for (const enemy of this.list) {
+      if (!enemy.alive) continue;
+      const pos = this._getPixelPos(enemy);
+      const sprite = Sprites.getSprite(enemy.type, enemy.isHopping);
+      Renderer.drawSprite(sprite, pos.x, pos.y);
+    }
+  },
+
+  _getPixelPos(enemy) {
+    const targetX = enemy.col * TILE_SIZE;
+    const targetY = (enemy.row + GRID_OFFSET_Y) * TILE_SIZE;
+    if (enemy.isHopping) {
+      const t = 1 - (enemy.hopTimer / HOP_DURATION);
+      const fromX = enemy.hopFromCol * TILE_SIZE;
+      const fromY = (enemy.hopFromRow + GRID_OFFSET_Y) * TILE_SIZE;
+      const x = fromX + (targetX - fromX) * t;
+      const baseY = fromY + (targetY - fromY) * t;
+      // Snake slithers flat (no arc), all others hop with arc
+      const arc = enemy.type === 'snake' ? 0 : -Math.sin(t * Math.PI) * 6;
+      return { x, y: baseY + arc };
+    }
+    return { x: targetX, y: targetY };
+  },
+
+  // Check if any HARMFUL enemy is at the same grid position as the player
+  // Ladybugs are harmless and excluded
+  checkCollisionWithPlayer() {
+    for (const enemy of this.list) {
+      if (!enemy.alive) continue;
+      if (enemy.type === 'ladybug') continue; // Ladybug doesn't hurt player
+      if (enemy.col === Player.col && enemy.row === Player.row) {
+        return true;
+      }
+    }
+    return false;
+  },
+
+  // Check if player can stomp a ladybug at the given position
+  // Returns the stomped enemy or null
+  checkPlayerStompAt(col, row) {
+    for (const enemy of this.list) {
+      if (!enemy.alive) continue;
+      if (enemy.type === 'ladybug' && enemy.col === col && enemy.row === row && !enemy.isHopping) {
+        return enemy;
+      }
+    }
+    return null;
+  },
+
+  // Kill a stompable enemy (ladybug)
+  stompEnemy(enemy) {
+    enemy.alive = false;
+    Player.addScore(150); // Ladybug stomp: 150 points
+    if (Audio.sfxLadybugSquish) Audio.sfxLadybugSquish();
+  },
+
+  // Get the kill score for an enemy type
+  getKillScore(type) {
+    if (type === 'red') return 200;
+    if (type === 'purple') return 500;
+    if (type === 'blue') return 800;
+    if (type === 'zombie') return 100;
+    if (type === 'snake') return 300;
+    if (type === 'smart') return 600;
+    return 100;
+  },
+
+  // Remove a captured enemy
+  capture(enemy) {
+    enemy.alive = false;
+    // Convert all tiles of this enemy's color to green
+    if (enemy.tileState !== null) {
+      Grid.convertAll(enemy.tileState, TILE_GREEN);
+    }
+    Player.addScore(100);
+    Audio.sfxCapture();
+  },
+
+  // Mark an enemy as killed and start respawn timer (3C)
+  markKilledForRespawn(type) {
+    // Only respawn frog types and snake (not snails or ladybugs)
+    const respawnTypes = ['red', 'purple', 'blue', 'smart', 'snake'];
+    if (respawnTypes.includes(type)) {
+      this.respawnQueue.push({ type, timer: this.RESPAWN_DELAY });
+    }
+  },
+
+  // Remove dead enemies from list
+  cleanup() {
+    this.list = this.list.filter(e => e.alive);
+  },
+};
+
+  </script>
+  <!-- src/gameplay/bonuses.js -->
+  <script>
+// Bonus items system - flies and green bug
+// Spawns collectible bonus items on the field periodically
+const Bonuses = {
+  items: [],         // Active bonus items on the field
+  spawnTimer: 0,     // Countdown to next spawn check
+  SPAWN_INTERVAL: 15000, // Check every 15 seconds
+  INITIAL_DELAY: 8000,   // Wait 8s before first spawn opportunity
+
+  // Player powerup state
+  speedBoost: false,
+  speedBoostTimer: 0,
+  SPEED_BOOST_DURATION: 5000, // 5 seconds
+
+  invincibilityBoost: false, // Different from post-death invincibility
+  invincibilityBoostTimer: 0,
+  INVINCIBILITY_DURATION: 6000, // 6 seconds
+
+  // Wing animation timer (shared for all flies)
+  wingTimer: 0,
+  wingFrame: true, // true = spread, false = folded
+
+  init() {
+    this.items = [];
+    this.spawnTimer = this.INITIAL_DELAY;
+    this.speedBoost = false;
+    this.speedBoostTimer = 0;
+    this.invincibilityBoost = false;
+    this.invincibilityBoostTimer = 0;
+    this.wingTimer = 0;
+    this.wingFrame = true;
+  },
+
+  update(dt) {
+    // Update wing animation (200ms toggle)
+    this.wingTimer += dt;
+    if (this.wingTimer >= 200) {
+      this.wingTimer -= 200;
+      this.wingFrame = !this.wingFrame;
+    }
+
+    // Update powerup timers
+    if (this.speedBoost) {
+      this.speedBoostTimer -= dt;
+      if (this.speedBoostTimer <= 0) {
+        this.speedBoost = false;
+        this.speedBoostTimer = 0;
+      }
+    }
+
+    if (this.invincibilityBoost) {
+      this.invincibilityBoostTimer -= dt;
+      if (this.invincibilityBoostTimer <= 0) {
+        this.invincibilityBoost = false;
+        this.invincibilityBoostTimer = 0;
+      }
+    }
+
+    // Update spawn timer
+    this.spawnTimer -= dt;
+    if (this.spawnTimer <= 0 && this.items.length === 0) {
+      this.spawnTimer = this.SPAWN_INTERVAL;
+      this._trySpawn();
+    }
+
+    // Update each bonus item
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      const item = this.items[i];
+
+      // Lifetime countdown
+      item.lifetime -= dt;
+      if (item.lifetime <= 0) {
+        this.items.splice(i, 1);
+        continue;
+      }
+
+      // Handle hopping animation
+      if (item.isHopping) {
+        item.hopTimer -= dt;
+        if (item.hopTimer <= 0) {
+          item.isHopping = false;
+          // Green bug converts tiles to green on landing
+          if (item.type === 'green_bug') {
+            const tile = Grid.get(item.col, item.row);
+            if (tile !== TILE_GREEN && tile !== TILE_SPIKE && tile !== TILE_WATER && tile !== TILE_ZOMBIE) {
+              Grid.set(item.col, item.row, TILE_GREEN);
+            }
+          }
+        }
+        continue;
+      }
+
+      // Movement cooldown
+      item.moveTimer -= dt;
+      if (item.moveTimer <= 0) {
+        item.moveTimer = item.moveInterval + (Math.random() * 300 - 150);
+        this._moveItem(item);
+      }
+    }
+  },
+
+  _trySpawn() {
+    // Roll for bonus type
+    const roll = Math.random();
+    let type;
+    if (roll < 0.05) {
+      type = 'life_fly';        // 5% chance
+    } else if (roll < 0.30) {
+      type = 'green_bug';       // 25% chance
+    } else if (roll < 0.60) {
+      type = 'invincible_fly';  // 30% chance
+    } else {
+      type = 'speed_fly';       // 40% chance
+    }
+
+    // Find a valid spawn position (not on player, not on hazards, not on enemies)
+    const pos = this._findSpawnPosition();
+    if (!pos) return; // No valid position found
+
+    // Item-specific settings
+    let lifetime, moveInterval, hopDuration;
+    switch (type) {
+      case 'speed_fly':
+        lifetime = 8000;
+        moveInterval = 2000;
+        hopDuration = 150;
+        break;
+      case 'invincible_fly':
+        lifetime = 8000;
+        moveInterval = 2000;
+        hopDuration = 150;
+        break;
+      case 'life_fly':
+        lifetime = 5000;   // Shorter window — rare and valuable
+        moveInterval = 1200; // Moves faster
+        hopDuration = 120;
+        break;
+      case 'green_bug':
+        lifetime = 20000;
+        moveInterval = 1500;
+        hopDuration = 200;
+        break;
+    }
+
+    this.items.push({
+      type,
+      col: pos.col,
+      row: pos.row,
+      lifetime,
+      moveTimer: moveInterval * 0.5 + Math.random() * 500, // stagger first move
+      moveInterval,
+      isHopping: false,
+      hopTimer: 0,
+      hopDuration,
+      hopFromCol: pos.col,
+      hopFromRow: pos.row,
+    });
+  },
+
+  _findSpawnPosition() {
+    // Try up to 20 random positions
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const col = Math.floor(Math.random() * GRID_COLS);
+      const row = Math.floor(Math.random() * GRID_ROWS);
+      const tile = Grid.get(col, row);
+
+      // Skip hazards, player position, and water
+      if (tile === TILE_SPIKE || tile === TILE_WATER || tile === TILE_ZOMBIE) continue;
+      if (col === Player.col && row === Player.row) continue;
+
+      // Skip enemy positions
+      let onEnemy = false;
+      for (const enemy of Enemies.list) {
+        if (enemy.alive && enemy.col === col && enemy.row === row) {
+          onEnemy = true;
+          break;
+        }
+      }
+      if (onEnemy) continue;
+
+      return { col, row };
+    }
+    return null;
+  },
+
+  _moveItem(item) {
+    // Choose a random direction
+    const dir = Math.floor(Math.random() * 4);
+    const newCol = item.col + DIR_DX[dir];
+    const newRow = item.row + DIR_DY[dir];
+
+    if (!Grid.inBounds(newCol, newRow)) return;
+
+    const tile = Grid.get(newCol, newRow);
+    // Flies avoid hazards; green bug can go anywhere except water
+    if (item.type === 'green_bug') {
+      if (tile === TILE_WATER || tile === TILE_ZOMBIE) return;
+    } else {
+      if (tile === TILE_SPIKE || tile === TILE_WATER || tile === TILE_ZOMBIE) return;
+    }
+
+    item.hopFromCol = item.col;
+    item.hopFromRow = item.row;
+    item.col = newCol;
+    item.row = newRow;
+    item.isHopping = true;
+    item.hopTimer = item.hopDuration;
+  },
+
+  // Called when player lands on a tile
+  checkPlayerPickup(col, row) {
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      const item = this.items[i];
+      if (item.col === col && item.row === row) {
+        this._applyBonus(item);
+        this.items.splice(i, 1);
+        return true;
+      }
+    }
+    return false;
+  },
+
+  _applyBonus(item) {
+    switch (item.type) {
+      case 'speed_fly':
+        this.speedBoost = true;
+        this.speedBoostTimer = this.SPEED_BOOST_DURATION;
+        Player.addScore(100);
+        if (Audio.sfxSpeedBoost) Audio.sfxSpeedBoost();
+        // Show pickup popup
+        this._showPickupPopup(item, '+100 SPEED!');
+        break;
+
+      case 'invincible_fly':
+        this.invincibilityBoost = true;
+        this.invincibilityBoostTimer = this.INVINCIBILITY_DURATION;
+        Player.addScore(100);
+        if (Audio.sfxInvincibleStart) Audio.sfxInvincibleStart();
+        this._showPickupPopup(item, '+100 POWER!');
+        break;
+
+      case 'life_fly':
+        Player.lives++;
+        Player.addScore(500);
+        if (Audio.sfxExtraLife) Audio.sfxExtraLife();
+        this._showPickupPopup(item, '1UP!');
+        break;
+
+      case 'green_bug':
+        Player.addScore(50);
+        if (Audio.sfxBonusPickup) Audio.sfxBonusPickup();
+        this._showPickupPopup(item, '+50');
+        break;
+    }
+  },
+
+  _showPickupPopup(item, text) {
+    const x = item.col * TILE_SIZE + TILE_SIZE / 2;
+    const y = (item.row + GRID_OFFSET_Y) * TILE_SIZE;
+    Encircle.bonusPopups.push({
+      text,
+      x,
+      y,
+      timer: 1200,
+      alpha: 1.0,
+    });
+  },
+
+  // Get the effective hop duration for the player (called from player.js)
+  getPlayerHopDuration() {
+    return this.speedBoost ? Math.floor(HOP_DURATION / 2) : HOP_DURATION;
+  },
+
+  draw() {
+    for (const item of this.items) {
+      const pos = this._getPixelPos(item);
+
+      // Blink when about to expire (last 2 seconds)
+      if (item.lifetime < 2000) {
+        if (Math.floor(item.lifetime / 100) % 2 === 0) continue; // skip drawing
+      }
+
+      if (item.type === 'green_bug') {
+        // Green bug uses standard sprite drawing
+        const sprite = Sprites.getSprite('green_bug', false);
+        Renderer.drawSprite(sprite, pos.x, pos.y);
+      } else {
+        // Flies use animated wing sprites
+        const sprite = Sprites.getFlySprite(item.type, this.wingFrame);
+        Renderer.drawSprite(sprite, pos.x, pos.y);
+      }
+    }
+
+    // Draw powerup indicators on player
+    if (this.speedBoost || this.invincibilityBoost) {
+      this._drawPowerupEffects();
+    }
+  },
+
+  _getPixelPos(item) {
+    const targetX = item.col * TILE_SIZE;
+    const targetY = (item.row + GRID_OFFSET_Y) * TILE_SIZE;
+    if (item.isHopping) {
+      const t = 1 - (item.hopTimer / item.hopDuration);
+      const fromX = item.hopFromCol * TILE_SIZE;
+      const fromY = (item.hopFromRow + GRID_OFFSET_Y) * TILE_SIZE;
+      const x = fromX + (targetX - fromX) * t;
+      const baseY = fromY + (targetY - fromY) * t;
+      // Flies have higher arc (6px), green bug lower (3px)
+      const arcHeight = item.type === 'green_bug' ? 3 : 6;
+      const arc = -Math.sin(t * Math.PI) * arcHeight;
+      return { x, y: baseY + arc };
+    }
+    return { x: targetX, y: targetY };
+  },
+
+  _drawPowerupEffects() {
+    if (!Player.alive) return;
+    const pos = Player.getPixelPos();
+    const ctx = Renderer.ctx;
+
+    if (this.invincibilityBoost) {
+      // Gold sparkle overlay on player
+      ctx.save();
+      ctx.globalAlpha = 0.35 + Math.sin(performance.now() / 100) * 0.15;
+      ctx.fillStyle = PALETTE.GOLD;
+      // Draw a shimmer rectangle over player area
+      ctx.fillRect(Math.floor(pos.x) + 2, Math.floor(pos.y) + 1, 12, 14);
+      ctx.restore();
+
+      // Sparkle particles around player
+      const sparkleTime = performance.now() / 200;
+      for (let i = 0; i < 4; i++) {
+        const angle = sparkleTime + i * Math.PI / 2;
+        const sx = Math.floor(pos.x) + 8 + Math.cos(angle) * 9;
+        const sy = Math.floor(pos.y) + 8 + Math.sin(angle) * 9;
+        Renderer.fillRect(sx, sy, 1, 1, PALETTE.GOLD);
+      }
+    } else if (this.speedBoost) {
+      // Blue/cyan tint overlay
+      ctx.save();
+      ctx.globalAlpha = 0.25 + Math.sin(performance.now() / 80) * 0.1;
+      ctx.fillStyle = PALETTE.CYAN;
+      ctx.fillRect(Math.floor(pos.x) + 2, Math.floor(pos.y) + 1, 12, 14);
+      ctx.restore();
+    }
+  },
+
+  // Kill an enemy due to invincibility collision
+  killEnemyByInvincibility(enemy) {
+    if (!enemy.alive) return;
+    enemy.alive = false;
+
+    // Award kill points based on enemy type
+    const baseScore = enemy.type === 'red' ? 200 :
+                     enemy.type === 'purple' ? 500 :
+                     enemy.type === 'blue' ? 800 :
+                     enemy.type === 'zombie' ? 100 :
+                     enemy.type === 'snail' ? 150 : 100;
+    Player.addScore(baseScore);
+    Audio.sfxCapture();
+
+    // Show kill popup
+    const x = enemy.col * TILE_SIZE + TILE_SIZE / 2;
+    const y = (enemy.row + GRID_OFFSET_Y) * TILE_SIZE;
+    Encircle.bonusPopups.push({
+      text: '+' + baseScore,
+      x,
+      y,
+      timer: 900,
+      alpha: 1.0,
+    });
+
+    // Clean up
+    Enemies.cleanup();
+  },
+};
+
+  </script>
+  <!-- src/gameplay/encircle.js -->
+  <script>
+// Encirclement detection - Qix/Amidar style flood-fill
+// Sequential animation pipeline: fill -> kills (one at a time) -> bonus -> clear
+// Also handles enemy (bad frog) encirclement detection (4A)
+const Encircle = {
+  flashTiles: [],
+  bonusPopups: [],
+  lastFillTime: 0,
+  fillComboMultiplier: 1,
+
+  // Animation pipeline state machine
+  pipeline: null, // null = idle, or {stage, ...data}
+  movementFrozen: false, // true = freeze player+enemies during pipeline
+  // Stages: 'filling', 'killing', 'kill_wait', 'bonus', 'bonus_wait', 'done'
+
+  checkAll() {
+    if (this.pipeline) return; // Don't check during animation
+
+    const visited = [];
+    for (let r = 0; r < GRID_ROWS; r++) {
+      visited[r] = [];
+      for (let c = 0; c < GRID_COLS; c++) {
+        visited[r][c] = false;
+      }
+    }
+
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        if (visited[r][c]) continue;
+        if (Grid.get(c, r) === TILE_GREEN) { visited[r][c] = true; continue; }
+
+        const region = [];
+        let touchesEdge = false;
+        const stack = [{ col: c, row: r }];
+
+        while (stack.length > 0) {
+          const { col: cx, row: ry } = stack.pop();
+          if (cx < 0 || cx >= GRID_COLS || ry < 0 || ry >= GRID_ROWS) { touchesEdge = true; continue; }
+          if (visited[ry][cx]) continue;
+          if (Grid.get(cx, ry) === TILE_GREEN) continue;
+          visited[ry][cx] = true;
+          region.push({ col: cx, row: ry });
+          if (cx === 0 || cx === GRID_COLS - 1 || ry === 0 || ry === GRID_ROWS - 1) touchesEdge = true;
+          stack.push({ col: cx + 1, row: ry }, { col: cx - 1, row: ry }, { col: cx, row: ry + 1 }, { col: cx, row: ry - 1 });
+        }
+
+        if (!touchesEdge && region.length > 0) {
+          this._startPipeline(region);
+          return; // Only one fill at a time
+        }
+      }
+    }
+  },
+
+  _startPipeline(region) {
+    // Combo tracking
+    const now = performance.now();
+    if (now - this.lastFillTime <= 2000 && this.lastFillTime > 0) {
+      this.fillComboMultiplier++;
+    } else {
+      this.fillComboMultiplier = 1;
+    }
+    this.lastFillTime = now;
+
+    // Find enemies in region (excluding zombies, snails, ladybugs)
+    const enemies = [];
+    for (const enemy of Enemies.list) {
+      if (!enemy.alive) continue;
+      if (enemy.type === 'zombie') continue;   // Zombies survive encirclement
+      if (enemy.type === 'snail') continue;     // Snails excluded
+      if (enemy.type === 'ladybug') continue;   // Ladybugs excluded
+      for (const tile of region) {
+        if (enemy.col === tile.col && enemy.row === tile.row) {
+          enemies.push(enemy);
+          break;
+        }
+      }
+    }
+
+    // Play fill sound
+    if (region.length <= 5) Audio.sfxFillSmall();
+    else if (region.length <= 15) Audio.sfxFillMedium();
+    else if (region.length <= 30) Audio.sfxFillLarge();
+    else Audio.sfxFillHuge();
+
+    this.movementFrozen = true; // Freeze movement when pipeline starts
+    this.pipeline = {
+      stage: 'filling',
+      queue: [...region],
+      index: 0,
+      tileCount: 0,
+      enemies: enemies,
+      killIndex: 0,
+      killTimer: 0,
+      bonusTimer: 0,
+    };
+  },
+
+  // Returns true if animating (caller should freeze movement)
+  isAnimating() {
+    return this.pipeline !== null;
+  },
+
+  update(dt) {
+    if (this.pipeline) {
+      const p = this.pipeline;
+
+      switch (p.stage) {
+        case 'filling':
+          // Fill 3 tiles per frame
+          for (let i = 0; i < 3 && p.index < p.queue.length; i++) {
+            const tile = p.queue[p.index];
+            if (Grid.get(tile.col, tile.row) !== TILE_GREEN) {
+              Grid.set(tile.col, tile.row, TILE_GREEN);
+              this.flashTiles.push({ col: tile.col, row: tile.row, timer: 200 });
+              p.tileCount++;
+            }
+            p.index++;
+          }
+          if (p.index >= p.queue.length) {
+            // Fill done — check if wave is cleared to decide freeze behavior
+            // If wave NOT cleared, unfreeze movement so player can keep playing
+            // while kill/bonus animations play out visually
+            if (!Waves.checkWinCondition()) {
+              this.movementFrozen = false;
+            }
+            // Move to kills or bonus
+            if (p.enemies.length > 0) {
+              p.stage = 'killing';
+              p.killIndex = 0;
+              p.killTimer = 600; // Time per kill animation
+              // Start first kill
+              const enemy = p.enemies[0];
+              enemy.alive = false;
+              // Mark for respawn (3C)
+              Enemies.markKilledForRespawn(enemy.type);
+              Audio.sfxCapture();
+            } else {
+              p.stage = 'bonus';
+              p.bonusTimer = 800;
+              this._showFillBonus(p);
+            }
+          }
+          break;
+
+        case 'killing':
+          p.killTimer -= dt;
+          if (p.killTimer <= 0) {
+            // Show score for this kill - each subsequent kill worth more
+            const enemy = p.enemies[p.killIndex];
+            const baseScore = Enemies.getKillScore(enemy.type);
+            const multiplier = p.killIndex + 1; // 1st=1x, 2nd=2x, 3rd=3x
+            const killScore = baseScore * multiplier;
+            Player.addScore(killScore);
+
+            const x = enemy.col * TILE_SIZE + TILE_SIZE / 2;
+            const y = (enemy.row + GRID_OFFSET_Y) * TILE_SIZE;
+            let text = '+' + killScore;
+            if (multiplier > 1) text += ' x' + multiplier;
+            this.bonusPopups.push({ text, x, y, timer: 900, alpha: 1.0 });
+
+            p.killIndex++;
+            if (p.killIndex < p.enemies.length) {
+              // Next kill
+              p.killTimer = 700;
+              p.stage = 'kill_wait';
+            } else {
+              // All kills done - show fill bonus
+              p.stage = 'bonus_wait';
+              p.bonusTimer = 500; // Brief pause before fill bonus
+            }
+          }
+          break;
+
+        case 'kill_wait':
+          p.bonusTimer -= dt;
+          // Wait for popup to mostly fade, then start next kill
+          if (this.bonusPopups.length === 0 || p.bonusTimer <= -200) {
+            const enemy = p.enemies[p.killIndex];
+            enemy.alive = false;
+            // Mark for respawn (3C)
+            Enemies.markKilledForRespawn(enemy.type);
+            Audio.sfxCapture();
+            p.killTimer = 600;
+            p.stage = 'killing';
+            p.bonusTimer = 0;
+          }
+          break;
+
+        case 'bonus_wait':
+          p.bonusTimer -= dt;
+          if (p.bonusTimer <= 0 && this.bonusPopups.length === 0) {
+            p.stage = 'bonus';
+            p.bonusTimer = 1000;
+            this._showFillBonus(p);
+          }
+          break;
+
+        case 'bonus':
+          p.bonusTimer -= dt;
+          if (p.bonusTimer <= 0 && this.bonusPopups.length === 0) {
+            // Check for perfect
+            if (Grid.fillPercent(TILE_GREEN) >= 1.0) {
+              Player.addScore(5000);
+              if (Audio.sfxPerfect) Audio.sfxPerfect();
+              let cx = 0, cy = 0;
+              for (const t of p.queue) { cx += t.col; cy += t.row; }
+              cx = Math.floor(cx / p.queue.length) * TILE_SIZE + 8;
+              cy = (Math.floor(cy / p.queue.length) + GRID_OFFSET_Y) * TILE_SIZE;
+              this.bonusPopups.push({ text: 'PERFECT!', x: cx, y: cy, timer: 1500, alpha: 1.0 });
+              p.stage = 'perfect_wait';
+              p.bonusTimer = 1500;
+            } else {
+              // Done!
+              Enemies.cleanup();
+              this.pipeline = null;
+            }
+          }
+          break;
+
+        case 'perfect_wait':
+          p.bonusTimer -= dt;
+          if (p.bonusTimer <= 0 && this.bonusPopups.length === 0) {
+            Enemies.cleanup();
+            this.pipeline = null;
+          }
+          break;
+      }
+    }
+
+    // Update flash timers
+    for (let i = this.flashTiles.length - 1; i >= 0; i--) {
+      this.flashTiles[i].timer -= dt;
+      if (this.flashTiles[i].timer <= 0) this.flashTiles.splice(i, 1);
+    }
+
+    // Update bonus popups
+    for (let i = this.bonusPopups.length - 1; i >= 0; i--) {
+      const popup = this.bonusPopups[i];
+      popup.timer -= dt;
+      popup.y -= dt * 0.02;
+      popup.alpha = Math.min(1, popup.timer / 800);
+      if (popup.timer <= 0) this.bonusPopups.splice(i, 1);
+    }
+  },
+
+  // Tiered fill score based on number of tiles cleared
+  calculateFillScore(tileCount) {
+    // Special high-value encirclements (near-max board)
+    if (tileCount >= 126) return 5000;
+    if (tileCount >= 125) return 4000;
+    if (tileCount >= 124) return 3500;
+    // Tiered formula
+    if (tileCount >= 64) return 1500 + 50 * (tileCount - 64);
+    if (tileCount >= 32) return 500 + 25 * (tileCount - 32);
+    if (tileCount >= 16) return 100 + 10 * (tileCount - 16);
+    if (tileCount >= 8) return 10 + 5 * (tileCount - 8);
+    return tileCount; // <8 tiles: 1 point per tile
+  },
+
+  // Check for enemy encirclements (4A - bad frog fill)
+  // Called from main.js after Enemies.update()
+  // If enemy tiles form an enclosure, fill it and kill the player if inside
+  checkEnemyEncirclement() {
+    if (this.pipeline) return false; // Don't check during animation
+
+    // Enemy tile colors that can encircle
+    const enemyTileTypes = [TILE_RED, TILE_PURPLE, TILE_BLUE, TILE_SMART];
+
+    for (const enemyTile of enemyTileTypes) {
+      // Check if there are enough tiles of this color to form an enclosure
+      if (Grid.count(enemyTile) < 4) continue;
+
+      const visited = [];
+      for (let r = 0; r < GRID_ROWS; r++) {
+        visited[r] = [];
+        for (let c = 0; c < GRID_COLS; c++) {
+          visited[r][c] = false;
+        }
+      }
+
+      for (let r = 0; r < GRID_ROWS; r++) {
+        for (let c = 0; c < GRID_COLS; c++) {
+          if (visited[r][c]) continue;
+          if (Grid.get(c, r) === enemyTile) { visited[r][c] = true; continue; }
+
+          // Flood fill from this non-enemy tile
+          const region = [];
+          let touchesEdge = false;
+          let playerInRegion = false;
+          const stack = [{ col: c, row: r }];
+
+          while (stack.length > 0) {
+            const { col: cx, row: ry } = stack.pop();
+            if (cx < 0 || cx >= GRID_COLS || ry < 0 || ry >= GRID_ROWS) { touchesEdge = true; continue; }
+            if (visited[ry][cx]) continue;
+            if (Grid.get(cx, ry) === enemyTile) continue; // Boundary
+            visited[ry][cx] = true;
+            region.push({ col: cx, row: ry });
+            if (cx === 0 || cx === GRID_COLS - 1 || ry === 0 || ry === GRID_ROWS - 1) touchesEdge = true;
+            if (cx === Player.col && ry === Player.row) playerInRegion = true;
+            stack.push(
+              { col: cx + 1, row: ry },
+              { col: cx - 1, row: ry },
+              { col: cx, row: ry + 1 },
+              { col: cx, row: ry - 1 }
+            );
+          }
+
+          if (!touchesEdge && region.length > 0) {
+            // Enemy encirclement detected! Fill region with enemy color
+            for (const tile of region) {
+              Grid.set(tile.col, tile.row, enemyTile);
+            }
+
+            if (Audio.sfxEnemyEncircle) Audio.sfxEnemyEncircle();
+
+            // If player is inside the enclosed region, kill them
+            if (playerInRegion && !Player.invincible) {
+              Player.die();
+              return true;
+            }
+            return true; // Signal that something happened (one at a time)
+          }
+        }
+      }
+    }
+    return false;
+  },
+
+  _showFillBonus(p) {
+    const baseScore = this.calculateFillScore(p.tileCount);
+    const fillBonus = baseScore * this.fillComboMultiplier;
+    Player.addScore(fillBonus);
+
+    let cx = 0, cy = 0;
+    for (const t of p.queue) { cx += t.col; cy += t.row; }
+    cx = Math.floor(cx / p.queue.length) * TILE_SIZE + 8;
+    cy = (Math.floor(cy / p.queue.length) + GRID_OFFSET_Y) * TILE_SIZE;
+
+    let text = '+' + fillBonus;
+    if (this.fillComboMultiplier > 1) text += ' x' + this.fillComboMultiplier;
+    this.bonusPopups.push({ text, x: cx, y: cy, timer: 1000, alpha: 1.0 });
+  },
+
+  draw() {
+    // Draw killing enemy (spinning) during kill stage
+    if (this.pipeline && (this.pipeline.stage === 'killing' || this.pipeline.stage === 'kill_wait')) {
+      const p = this.pipeline;
+      const idx = Math.min(p.killIndex, p.enemies.length - 1);
+      const enemy = p.enemies[idx];
+      const x = enemy.col * TILE_SIZE;
+      const y = (enemy.row + GRID_OFFSET_Y) * TILE_SIZE;
+
+      if (p.stage === 'killing') {
+        // Spinning sprite
+        const isHop = Math.floor(p.killTimer / 60) % 2 === 0;
+        const sprite = Sprites.getSprite(enemy.type, isHop);
+        // White flash at start
+        if (p.killTimer > 500) {
+          Renderer.fillRect(x, y, TILE_SIZE, TILE_SIZE, 'rgba(255, 255, 255, 0.8)');
+        }
+        Renderer.drawSprite(sprite, x, y);
+      }
+    }
+
+    // Flash tiles
+    for (const flash of this.flashTiles) {
+      const x = flash.col * TILE_SIZE;
+      const y = (flash.row + GRID_OFFSET_Y) * TILE_SIZE;
+      if (Math.floor(flash.timer / 50) % 2) {
+        Renderer.fillRect(x, y, TILE_SIZE, TILE_SIZE, 'rgba(255, 255, 255, 0.4)');
+      }
+    }
+
+    // Bonus popups
+    for (const popup of this.bonusPopups) {
+      const ctx = Renderer.ctx;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, popup.alpha));
+      const color = popup.text.includes('PERFECT') ? PALETTE.GREEN_LIGHT : PALETTE.SCORE_COLOR;
+      Renderer.drawText(popup.text, popup.x - popup.text.length * 4, popup.y, color);
+      ctx.restore();
+    }
+  },
+};
+
+  </script>
+  <!-- src/gameplay/waves.js -->
+  <script>
+// Wave system - escalating difficulty with structured progression
+const Waves = {
+  current: 1,
+  targetPercent: 0.65,
+  timer: 0,
+  waveStartTime: 0,
+  hurryUpPlayed: false,
+  snailsSpawned: 0,
+
+  // Explicit wave table: each entry lists enemy counts by type.
+  // Every wave is harder than the last (more enemies, new types, or higher fill%).
+  // Enemy types: red, purple, blue, zombie, ladybug, snake, smart
+  // Zombie waves (every 5th) are handled separately.
+  _waveTable: {
+    1:  { red: 1 },
+    2:  { red: 1 },
+    3:  { red: 2 },
+    4:  { red: 2, ladybug: 1 },
+    // Wave 5: zombie wave
+    6:  { red: 2, purple: 1 },
+    7:  { red: 2, purple: 1, ladybug: 1 },
+    8:  { red: 3, purple: 1 },
+    9:  { red: 2, purple: 1, blue: 1, smart: 1 },
+    // Wave 10: architect wave (smart frogs only)
+    11: { red: 2, purple: 1, blue: 1, snake: 1 },
+    12: { red: 3, purple: 1, blue: 1, snake: 1 },
+    13: { red: 3, purple: 2, blue: 1, ladybug: 1 },
+    14: { red: 3, purple: 2, blue: 1, snake: 1, smart: 1 },
+    // Wave 15: zombie wave
+    16: { red: 3, purple: 2, blue: 2, snake: 1, smart: 1 },
+    17: { red: 4, purple: 2, blue: 2, snake: 1, ladybug: 1 },
+    18: { red: 4, purple: 2, blue: 2, snake: 2, smart: 1 },
+    19: { red: 4, purple: 3, blue: 2, snake: 2, smart: 1, ladybug: 1 },
+    // Wave 20: zombie wave
+  },
+
+  // Sky/atmosphere state (day/night cycle)
+  isNighttime: false,
+  isArchitectWave: false,
+  skyColor: null,       // Set in setupWave; fallback via || in draw code
+  skyDarkColor: null,
+  waterColor: null,
+
+  // Nighttime stars (generated once per night wave)
+  stars: [],
+  _starSeed: 0,
+
+  init() {
+    this.current = 1;
+    this.setupWave();
+  },
+
+  // Generate random star positions for nighttime sky
+  _generateStars() {
+    this.stars = [];
+    // Deterministic PRNG so stars are stable within a wave
+    let seed = this.current * 7919 + 31;
+    const rand = () => { seed = (seed * 16807) % 2147483647; return (seed & 0x7fffffff) / 2147483647; };
+
+    const numStars = 6 + Math.floor(rand() * 4); // 6-9 stars
+    for (let i = 0; i < numStars; i++) {
+      this.stars.push({
+        x: 2 + Math.floor(rand() * 252),   // Across full HUD width
+        y: 1 + Math.floor(rand() * 28),     // y 1-28 (HUD + reed area, avoid edges)
+        twinkle: rand() < 0.4,              // 40% of stars twinkle
+      });
+    }
+  },
+
+  // Check if a position is safe for enemy spawn (not on or adjacent to player start)
+  isSafeSpawnPosition(col, row) {
+    const playerCol = Math.floor(GRID_COLS / 2);
+    const playerRow = Math.floor(GRID_ROWS / 2);
+
+    // Check if on player position
+    if (col === playerCol && row === playerRow) return false;
+
+    // Check if adjacent to player (orthogonal neighbors)
+    for (let d = 0; d < 4; d++) {
+      const nc = playerCol + DIR_DX[d];
+      const nr = playerRow + DIR_DY[d];
+      if (col === nc && row === nr) return false;
+    }
+
+    return true;
+  },
+
+  setupWave() {
+    Enemies.init();
+    Grid.init();
+    Player.reset();
+    // Reset bonus items and powerups between waves
+    if (typeof Bonuses !== 'undefined') {
+      Bonuses.init();
+    }
+    this.waveStartTime = performance.now();
+    this.hurryUpPlayed = false;
+    this.snailsSpawned = 0;
+
+    const wave = this.current;
+
+    // Fill percentage progression - gradual increase
+    if (wave <= 3) this.targetPercent = 0.65;
+    else if (wave <= 6) this.targetPercent = 0.70;
+    else if (wave <= 9) this.targetPercent = 0.75;
+    else if (wave <= 12) this.targetPercent = 0.78;
+    else if (wave <= 15) this.targetPercent = 0.80;
+    else if (wave <= 18) this.targetPercent = 0.82;
+    else this.targetPercent = 0.85;
+
+    // Architect waves every 10th wave (10, 20, 30...) — takes priority over zombie
+    const isArchitectWave = (wave % 10 === 0);
+    // Zombie waves every 5th wave, but NOT on architect waves
+    const isZombieWave = (wave % 5 === 0) && !isArchitectWave;
+    this.isArchitectWave = isArchitectWave;
+
+    // Set sky atmosphere — daytime for normal waves, nighttime for zombie waves, dusk for architect
+    this.isNighttime = isZombieWave;
+    if (isArchitectWave) {
+      this.skyColor = '#2a1a3a';       // Dusk purple
+      this.skyDarkColor = '#2a1a3a';
+      this.waterColor = '#1a1a2a';
+    } else if (isZombieWave) {
+      this.skyColor = PALETTE.SKY_NIGHT;
+      this.skyDarkColor = PALETTE.SKY_NIGHT_DARK;
+      this.waterColor = PALETTE.WATER_BG;
+    } else {
+      this.skyColor = PALETTE.SKY_DAY;
+      this.skyDarkColor = PALETTE.SKY_DAY_DARK;
+      this.waterColor = PALETTE.WATER_DAY;
+    }
+
+    // Generate stars for nighttime (but not architect waves — they have their own look)
+    if (isZombieWave && !isArchitectWave) {
+      this._generateStars();
+    } else {
+      this.stars = [];
+    }
+
+    if (isArchitectWave) {
+      this._spawnArchitectWave(wave);
+    } else if (isZombieWave) {
+      this._spawnZombieWave(wave);
+    } else {
+      this._spawnWaveEnemies(wave);
+    }
+
+    // Speed scaling: starting wave 5, reduce moveInterval by 20ms per wave
+    // Minimum moveInterval: 250ms
+    if (wave > 4) {
+      for (const enemy of Enemies.list) {
+        enemy.moveInterval = Math.max(250, enemy.moveInterval - (wave - 4) * 20);
+      }
+    }
+  },
+
+  // Spawn zombie-only wave. Zombie count = wave / 5, capped at 6.
+  _spawnZombieWave(wave) {
+    const numZombies = Math.min(6, Math.ceil(wave / 5));
+    const positions = [
+      [2, 2],
+      [GRID_COLS - 3, 2],
+      [2, GRID_ROWS - 3],
+      [GRID_COLS - 3, GRID_ROWS - 3],
+      [4, 6],
+      [GRID_COLS - 5, 6],
+    ];
+    for (let i = 0; i < numZombies && i < positions.length; i++) {
+      const [c, r] = positions[i];
+      if (this.isSafeSpawnPosition(c, r)) {
+        Enemies.spawn('zombie', c, r);
+      } else {
+        Enemies.spawn('zombie', c + 1, r + 1);
+      }
+    }
+  },
+
+  // Spawn architect-only wave: smart frogs. Count = wave/10 + 1, so wave 10 = 2, wave 20 = 3, etc.
+  _spawnArchitectWave(wave) {
+    const numArchitects = Math.min(6, 1 + Math.ceil(wave / 10));
+    for (let i = 0; i < numArchitects; i++) {
+      const edge = Math.floor(Math.random() * 4);
+      let col, row;
+      if (edge === 0) { col = Math.floor(Math.random() * GRID_COLS); row = 0; }
+      else if (edge === 1) { col = GRID_COLS - 1; row = Math.floor(Math.random() * GRID_ROWS); }
+      else if (edge === 2) { col = Math.floor(Math.random() * GRID_COLS); row = GRID_ROWS - 1; }
+      else { col = 0; row = Math.floor(Math.random() * GRID_ROWS); }
+      Enemies.queueEnemy('smart', col, row);
+    }
+    Enemies.deployTimer = 2000;
+  },
+
+  // Spawn enemies for a normal (non-zombie) wave.
+  // Enemies enter from edges after a delay — never present at wave start.
+  _spawnWaveEnemies(wave) {
+    const config = this._waveTable[wave] || this._generateWaveConfig(wave);
+    const enemyList = [];
+
+    // Build flat list of enemy types to spawn
+    for (const [type, count] of Object.entries(config)) {
+      for (let i = 0; i < count; i++) {
+        enemyList.push(type);
+      }
+    }
+
+    // Queue all enemies for delayed edge deployment
+    for (let i = 0; i < enemyList.length; i++) {
+      const edge = Math.floor(Math.random() * 4);
+      let col, row;
+      if (edge === 0) { col = Math.floor(Math.random() * GRID_COLS); row = 0; }
+      else if (edge === 1) { col = GRID_COLS - 1; row = Math.floor(Math.random() * GRID_ROWS); }
+      else if (edge === 2) { col = Math.floor(Math.random() * GRID_COLS); row = GRID_ROWS - 1; }
+      else { col = 0; row = Math.floor(Math.random() * GRID_ROWS); }
+      Enemies.queueEnemy(enemyList[i], col, row);
+    }
+    // First enemy deploys after 2 seconds, then every DEPLOY_INTERVAL
+    Enemies.deployTimer = 2000;
+  },
+
+  // Generate wave config for waves beyond the explicit table.
+  // Each enemy type scales gradually. Every wave adds at least one
+  // unit of difficulty compared to the previous non-zombie wave.
+  _generateWaveConfig(wave) {
+    // Find the effective wave index (skip zombie waves for scaling)
+    // Count of non-zombie waves up to this point determines scaling
+    const nonZombieWave = wave - Math.floor(wave / 5);
+
+    // Base counts scale with non-zombie wave number
+    const red = Math.min(6, 3 + Math.floor((nonZombieWave - 15) / 3));
+    const purple = Math.min(4, 2 + Math.floor((nonZombieWave - 15) / 4));
+    const blue = Math.min(3, 2 + Math.floor((nonZombieWave - 17) / 4));
+    const snake = Math.min(3, 1 + Math.floor((nonZombieWave - 15) / 5));
+    const smart = Math.min(3, 1 + Math.floor((nonZombieWave - 16) / 5));
+    const ladybug = Math.min(2, 1 + Math.floor((nonZombieWave - 17) / 6));
+
+    const config = {};
+    if (red > 0) config.red = red;
+    if (purple > 0) config.purple = purple;
+    if (blue > 0) config.blue = blue;
+    if (snake > 0) config.snake = snake;
+    if (smart > 0) config.smart = smart;
+    if (ladybug > 0) config.ladybug = ladybug;
+
+    return config;
+  },
+
+  // Get spread-out spawn positions for enemies.
+  // Uses corner and edge positions, avoiding player start (center).
+  _getSpawnPositions(count) {
+    const positions = [
+      [2, 2],
+      [GRID_COLS - 3, 2],
+      [2, GRID_ROWS - 3],
+      [GRID_COLS - 3, GRID_ROWS - 3],
+      [Math.floor(GRID_COLS / 2), 1],
+      [Math.floor(GRID_COLS / 2), GRID_ROWS - 2],
+      [1, Math.floor(GRID_ROWS / 2)],
+      [GRID_COLS - 2, Math.floor(GRID_ROWS / 2)],
+      [4, 3],
+      [GRID_COLS - 5, 3],
+      [4, GRID_ROWS - 4],
+      [GRID_COLS - 5, GRID_ROWS - 4],
+      [3, 1],
+      [GRID_COLS - 4, 1],
+      [3, GRID_ROWS - 2],
+      [GRID_COLS - 4, GRID_ROWS - 2],
+    ];
+
+    const result = [];
+    const used = new Set();
+
+    for (let i = 0; i < count; i++) {
+      if (i < positions.length) {
+        const [c, r] = positions[i];
+        if (this.isSafeSpawnPosition(c, r) && !used.has(`${c},${r}`)) {
+          result.push([c, r]);
+          used.add(`${c},${r}`);
+        } else {
+          // Nudge to avoid conflicts
+          const nc = c + 1;
+          const nr = r + 1;
+          result.push([nc, nr]);
+          used.add(`${nc},${nr}`);
+        }
+      } else {
+        // Overflow: generate additional positions along edges
+        const c = 1 + (i % (GRID_COLS - 2));
+        const r = (i % 2 === 0) ? 1 : GRID_ROWS - 2;
+        if (this.isSafeSpawnPosition(c, r) && !used.has(`${c},${r}`)) {
+          result.push([c, r]);
+          used.add(`${c},${r}`);
+        } else {
+          result.push([c + 1, r]);
+          used.add(`${c + 1},${r}`);
+        }
+      }
+    }
+
+    return result;
+  },
+
+  // Update wave timer and spawn snails
+  update(dt) {
+    const elapsedTime = performance.now() - this.waveStartTime;
+
+    // Hurry up warning at 30 seconds
+    if (elapsedTime >= 30000 && !this.hurryUpPlayed) {
+      this.hurryUpPlayed = true;
+      if (Audio.sfxHurryUp) {
+        Audio.sfxHurryUp();
+      }
+    }
+
+    // Spawn snails at 35s, 45s, 55s
+    if (elapsedTime >= 35000 && this.snailsSpawned === 0) {
+      this._spawnSnail();
+      this.snailsSpawned++;
+    } else if (elapsedTime >= 45000 && this.snailsSpawned === 1) {
+      this._spawnSnail();
+      this.snailsSpawned++;
+    } else if (elapsedTime >= 55000 && this.snailsSpawned === 2) {
+      this._spawnSnail();
+      this.snailsSpawned++;
+    }
+  },
+
+  // Spawn a snail at a random edge position
+  _spawnSnail() {
+    const edge = Math.floor(Math.random() * 4); // 0=top, 1=right, 2=bottom, 3=left
+    let col, row;
+    if (edge === 0) {
+      col = Math.floor(Math.random() * GRID_COLS);
+      row = 0;
+    } else if (edge === 1) {
+      col = GRID_COLS - 1;
+      row = Math.floor(Math.random() * GRID_ROWS);
+    } else if (edge === 2) {
+      col = Math.floor(Math.random() * GRID_COLS);
+      row = GRID_ROWS - 1;
+    } else {
+      col = 0;
+      row = Math.floor(Math.random() * GRID_ROWS);
+    }
+    Enemies.spawn('snail', col, row);
+  },
+
+  // Check if wave is complete
+  checkWinCondition() {
+    return Grid.fillPercent(TILE_GREEN) >= this.targetPercent;
+  },
+
+  // Advance to next wave
+  nextWave() {
+    this.current++;
+    this.setupWave();
+  },
+};
+
+  </script>
+  <!-- src/gameplay/hud.js -->
+  <script>
+// HUD - score, lives, wave, fill percentage
+// All text on 8x8 grid, in the top HUD row (16px tall)
+const HUD = {
+  draw() {
+    // Background bar — use dynamic sky color (blue daytime, dark nighttime)
+    const bgColor = Waves.skyColor || PALETTE.HUD_BG;
+    Renderer.fillRect(0, 0, SCREEN_WIDTH, HUD_HEIGHT, bgColor);
+
+    // Draw twinkling stars during nighttime (behind HUD text)
+    if (Waves.isNighttime && Waves.stars.length > 0) {
+      const now = performance.now();
+      for (const star of Waves.stars) {
+        // Stars in HUD area only (y < 16)
+        if (star.y < 16) {
+          // Twinkle: toggle visibility every ~500ms
+          if (!star.twinkle || Math.floor(now / 500) % 2 === 0) {
+            Renderer.fillRect(star.x, star.y, 1, 1, PALETTE.WHITE);
+          }
+        }
+      }
+    }
+
+    // Score (left) — snap to 8px grid: x=0, y=4
+    Renderer.drawText(String(Player.score).padStart(7, '0'), 0, 4, PALETTE.SCORE_COLOR);
+
+    // Wave (center-left) — x=64, y=4
+    Renderer.drawText('W' + Waves.current, 64, 4, PALETTE.WHITE);
+
+    // Fill percentage — x=104, y=4
+    const pct = Math.floor(Grid.fillPercent(TILE_GREEN) * 100);
+    const target = Math.floor(Waves.targetPercent * 100);
+    const pctColor = pct >= target ? PALETTE.GREEN : PALETTE.HUD_TEXT;
+    Renderer.drawText(pct + '%', 104, 4, pctColor);
+
+    // Fill bar — x=144, y=6
+    Renderer.fillRect(144, 6, 52, 4, PALETTE.NEUTRAL);
+    const barWidth = Math.floor(50 * Math.min(1, pct / 100));
+    Renderer.fillRect(145, 7, barWidth, 2, PALETTE.GREEN);
+    const targetX = 145 + Math.floor(50 * Waves.targetPercent);
+    Renderer.fillRect(targetX, 5, 1, 6, PALETTE.WHITE);
+
+    // Lives (right) — x=208
+    for (let i = 0; i < Player.lives; i++) {
+      const lx = 208 + i * 10;
+      Renderer.fillRect(lx + 2, 3, 6, 8, PALETTE.GREEN);
+      Renderer.fillRect(lx + 3, 2, 2, 2, PALETTE.GREEN);
+      Renderer.fillRect(lx + 7, 2, 2, 2, PALETTE.GREEN);
+      Renderer.fillRect(lx + 3, 4, 1, 1, PALETTE.BLACK);
+      Renderer.fillRect(lx + 6, 4, 1, 1, PALETTE.BLACK);
+    }
+  },
+};
+
+  </script>
+  <!-- src/main.js -->
+  <script>
+// Main game loop - ties everything together
+const Game = {
+  state: STATE_TITLE,
+  lastTime: 0,
+  waveClearTimer: 0,
+  waveClearPhase: 0,
+  deathTimer: 0,
+  highScore: 0,
+  lastClearBonus: 0, // Stored for display during clear phase
+
+  init() {
+    Renderer.init();
+    Input.init();
+    Audio.init();
+    Sprites.init();
+    Decoration.init();
+    this.state = STATE_TITLE;
+  },
+
+  start() {
+    Player.lives = 3;
+    Player.score = 0;
+    Bonuses.init();
+    Waves.init();
+    this.state = STATE_PLAYING;
+    Audio.startMusic();
+  },
+
+  update(dt) {
+    switch (this.state) {
+      case STATE_TITLE:
+        if (Input.wasPressed('Enter') || Input.wasPressed('Space')) {
+          this.start();
+        }
+        break;
+
+      case STATE_PLAYING:
+        // Pause
+        if (Input.wasPressed('Enter') || Input.wasPressed('Escape')) {
+          this.state = STATE_PAUSED;
+          break;
+        }
+
+        // When pipeline is animating, conditionally freeze movement
+        if (Encircle.isAnimating()) {
+          if (Encircle.movementFrozen) {
+            // Full freeze: only update encircle pipeline
+            Encircle.update(dt);
+            // After pipeline completes, check for wave clear
+            if (!Encircle.isAnimating() && Waves.checkWinCondition()) {
+              const clearBonus = this._calculateClearBonus();
+              Player.addScore(clearBonus);
+              this.lastClearBonus = clearBonus;
+              this.state = STATE_WAVE_CLEAR;
+              this.waveClearPhase = CLEAR_SHOW_MESSAGE;
+              this.waveClearTimer = 1000;
+              Audio.sfxWaveClear();
+            }
+            break;
+          }
+          // Not frozen: pipeline animates alongside normal gameplay
+          // (kill/bonus animations play while player keeps moving)
+          Encircle.update(dt);
+          // After pipeline completes during unfrozen play, just continue —
+          // win condition is already met or will be checked below
+        }
+
+        Player.update(dt);
+        Enemies.update(dt);
+        Bonuses.update(dt);
+        if (!Encircle.isAnimating()) {
+          Encircle.update(dt);
+        }
+        Waves.update(dt);
+        // Continuously check encirclement (not just on player hop)
+        Encircle.checkAll();
+
+        // Check for enemy (bad frog) encirclement (4A)
+        Encircle.checkEnemyEncirclement();
+
+        // Check if player died (spike, enemy, enemy encirclement, etc)
+        if (Player.justDied) {
+          Player.justDied = false;
+          this.state = STATE_DYING;
+          this.deathTimer = 1500;
+          break;
+        }
+
+        // Collision check with enemies (skip if invincible)
+        if (Enemies.checkCollisionWithPlayer() && !Player.isHopping && !Player.invincible) {
+          // If invincibility powerup is active, kill the enemy instead
+          if (Bonuses.invincibilityBoost) {
+            for (const enemy of Enemies.list) {
+              if (enemy.alive && enemy.col === Player.col && enemy.row === Player.row) {
+                Bonuses.killEnemyByInvincibility(enemy);
+                break;
+              }
+            }
+          } else {
+            Player.die();
+            Player.justDied = false;
+            this.state = STATE_DYING;
+            this.deathTimer = 1500;
+            break;
+          }
+        }
+
+        // Win condition check (non-animating path)
+        if (!Player.isHopping && Waves.checkWinCondition()) {
+          const clearBonus = this._calculateClearBonus();
+          Player.addScore(clearBonus);
+          this.lastClearBonus = clearBonus;
+          this.state = STATE_WAVE_CLEAR;
+          this.waveClearPhase = CLEAR_SHOW_MESSAGE;
+          this.waveClearTimer = 1000;
+          Audio.sfxWaveClear();
+        }
+        break;
+
+      case STATE_WAVE_CLEAR:
+        this.waveClearTimer -= dt;
+        if (this.waveClearTimer <= 0) {
+          if (this.waveClearPhase === CLEAR_SHOW_MESSAGE) {
+            // Phase 1 done, start bonus clear phase
+            this.waveClearPhase = CLEAR_BONUS_FILL;
+            this.waveClearTimer = 800; // Brief bonus fill flash
+            // Clear remaining enemies (they escaped)
+            for (const enemy of Enemies.list) {
+              enemy.alive = false;
+            }
+            Enemies.cleanup();
+          } else if (this.waveClearPhase === CLEAR_BONUS_FILL) {
+            // Phase 2 done, show wave number
+            this.waveClearPhase = CLEAR_SHOW_WAVE;
+            this.waveClearTimer = 1200;
+          } else {
+            // Phase 3 done, next wave
+            Waves.nextWave();
+            this.state = STATE_PLAYING;
+          }
+        }
+        break;
+
+      case STATE_DYING:
+        this.deathTimer -= dt;
+        if (this.deathTimer <= 0) {
+          if (Player.lives <= 0) {
+            this.state = STATE_GAME_OVER;
+            Audio.stopMusic();
+            // Update high score
+            if (Player.score > this.highScore) {
+              this.highScore = Player.score;
+            }
+          } else {
+            // Respawn
+            Player.reset();
+            Grid.init();
+            Waves.setupWave();
+            this.state = STATE_PLAYING;
+          }
+        }
+        break;
+
+      case STATE_GAME_OVER:
+        if (Input.wasPressed('Enter') || Input.wasPressed('Space')) {
+          this.state = STATE_TITLE;
+        }
+        break;
+
+      case STATE_PAUSED:
+        if (Input.wasPressed('Enter') || Input.wasPressed('Escape')) {
+          this.state = STATE_PLAYING;
+        }
+        break;
+    }
+  },
+
+  draw() {
+    Renderer.clear();
+
+    switch (this.state) {
+      case STATE_TITLE:
+        this._drawTitle();
+        break;
+
+      case STATE_PLAYING:
+      case STATE_PAUSED:
+        Grid.draw();
+        Decoration.draw();
+        Enemies.draw();
+        Bonuses.draw();
+        Player.draw();
+        Encircle.draw();
+        HUD.draw();
+        if (this.state === STATE_PAUSED) {
+          // "PAUSED" = 6 chars * 8 = 48px, center = (256-48)/2 = 104
+          Renderer.drawText('PAUSED', 104, 120, PALETTE.WHITE);
+        }
+        break;
+
+      case STATE_WAVE_CLEAR:
+        Grid.draw();
+        Decoration.draw();
+        Enemies.draw(); // Show enemies during phase 1
+        Bonuses.draw();
+        Player.draw();
+        Encircle.draw();
+        HUD.draw();
+
+        if (this.waveClearPhase === CLEAR_SHOW_MESSAGE) {
+          // Phase 1: Show CLEAR! with board visible
+          Renderer.drawText('CLEAR!', 104, 120, PALETTE.GREEN_LIGHT);
+          // Show clear bonus below
+          if (this.lastClearBonus > 0) {
+            const bonusText = '+' + this.lastClearBonus;
+            const bx = 128 - bonusText.length * 4; // Center text
+            Renderer.drawText(bonusText, bx, 134, PALETTE.SCORE_COLOR);
+          }
+        } else if (this.waveClearPhase === CLEAR_BONUS_FILL) {
+          // Phase 2: Flash remaining tiles (bonus clear effect)
+          if (Math.floor(this.waveClearTimer / 100) % 2) {
+            // Draw white flash over non-green tiles
+            for (let r = 0; r < GRID_ROWS; r++) {
+              for (let c = 0; c < GRID_COLS; c++) {
+                if (Grid.get(c, r) !== TILE_GREEN) {
+                  const x = c * TILE_SIZE;
+                  const y = (r + GRID_OFFSET_Y) * TILE_SIZE;
+                  Renderer.fillRect(x, y, TILE_SIZE, TILE_SIZE, 'rgba(255, 255, 255, 0.6)');
+                }
+              }
+            }
+          }
+        } else {
+          // Phase 3: Show wave number
+          Renderer.drawText('WAVE ' + Waves.current, 88, 108, PALETTE.GREEN);
+          Renderer.drawText('COMPLETE', 96, 120, PALETTE.GREEN_LIGHT);
+        }
+        break;
+
+      case STATE_DYING:
+        Grid.draw();
+        Decoration.draw();
+        Enemies.draw();
+        HUD.draw();
+        const deathPos = Player.getPixelPos();
+        Renderer.drawSprite(Sprites.maripoga_death, deathPos.x, deathPos.y);
+        break;
+
+      case STATE_GAME_OVER:
+        // "GAME OVER" = 9*8 = 72px, center = 92
+        Renderer.drawText('GAME OVER', 92, 80, PALETTE.RED);
+        Renderer.drawText('SCORE', 104, 100, PALETTE.WHITE);
+        Renderer.drawText(String(Player.score), 128 - String(Player.score).length * 4, 112, PALETTE.SCORE_COLOR);
+        if (this.highScore > 0) {
+          Renderer.drawText('BEST', 112, 130, PALETTE.GREEN);
+          Renderer.drawText(String(this.highScore), 128 - String(this.highScore).length * 4, 142, PALETTE.GREEN_LIGHT);
+        }
+        Renderer.drawText('PRESS ENTER', 84, 172, PALETTE.HUD_TEXT);
+        break;
+    }
+  },
+
+  // Calculate clear bonus: 10 pts per % over target, doubled if 100%
+  _calculateClearBonus() {
+    const actualPercent = Math.round(Grid.fillPercent(TILE_GREEN) * 100);
+    const targetPercent = Math.round(Waves.targetPercent * 100);
+    const overPercent = Math.max(0, actualPercent - targetPercent);
+    let bonus = overPercent * 10;
+    if (actualPercent >= 100) bonus *= 2;
+    return bonus;
+  },
+
+  _drawTitle() {
+    // Title screen — "MARIPOGA'S" = 10*8 = 80px, center = 88
+    Renderer.drawText("MARIPOGA'S", 88, 56, PALETTE.GREEN);
+    // "ERRAND" = 6*8 = 48px, center = 104
+    Renderer.drawText('ERRAND', 104, 72, PALETTE.GREEN_LIGHT);
+
+    // Draw Maripoga in the center
+    const sprite = Sprites.getSprite('player', false);
+    Renderer.drawSprite(sprite, 120, 100);
+
+    // "PRESS ENTER" = 11*8 = 88px, center = 84
+    Renderer.drawText('PRESS ENTER', 84, 160, PALETTE.HUD_TEXT);
+    // "ARROWS TO HOP" = 13*8 = 104, center = 76
+    Renderer.drawText('ARROWS TO HOP', 76, 180, PALETTE.NEUTRAL);
+  },
+
+  // Main loop
+  loop(timestamp) {
+    const dt = Math.min(timestamp - this.lastTime, 50); // cap dt at 50ms
+    this.lastTime = timestamp;
+
+    this.update(dt);
+    this.draw();
+    Input.clearFrame();
+
+    requestAnimationFrame((t) => this.loop(t));
+  },
+
+  run() {
+    this.init();
+    this.lastTime = performance.now();
+    requestAnimationFrame((t) => this.loop(t));
+  },
+};
+
+// Boot!
+Game.run();
+
+  </script>
+</body>
+</html>

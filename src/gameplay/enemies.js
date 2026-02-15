@@ -133,6 +133,10 @@ const Enemies = {
             // Ladybug resets tile to TILE_NEUTRAL
             Grid.set(enemy.col, enemy.row, TILE_NEUTRAL);
           } else if (enemy.tileState !== null) {
+            // -1 point when enemy reclaims a green tile
+            if (Grid.get(enemy.col, enemy.row) === TILE_GREEN) {
+              Player.addScore(-1);
+            }
             Grid.set(enemy.col, enemy.row, enemy.tileState);
           }
         }

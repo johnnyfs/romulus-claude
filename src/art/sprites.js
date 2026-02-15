@@ -331,45 +331,45 @@ const Sprites = {
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
     ];
 
-    // SNAKE - Green/yellow elongated serpent, slithering
-    const Sg = PALETTE.SNAKE_GREEN;
-    const Sgd = PALETTE.SNAKE_GREEN_DARK;
-    const Sy = PALETTE.SNAKE_YELLOW;
+    // SNAKE - Orange serpent, bigger and more visible
+    const Sg = PALETTE.SNAKE_BODY;
+    const Sgd = PALETTE.SNAKE_BODY_DARK;
+    const Sy = PALETTE.SNAKE_PATTERN;
 
-    // Snake idle - coiled
+    // Snake idle - coiled, larger body
     this.snake_idle = [
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,Sg,Sg,Sg,Sg,_,_,_,_,_,_],
-      [_,_,_,_,_,Sg,Sy,Sg,Sg,Sy,Sg,_,_,_,_,_],
-      [_,_,_,_,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,_,_,_,_],
-      [_,_,_,Sg,Sgd,Sg,Sgd,Sg,Sg,Sgd,Sg,Sgd,Sg,_,_,_],
-      [_,_,Sg,Sg,Sg,Sgd,Sg,Sg,Sg,Sg,Sgd,Sg,Sg,Sg,_,_],
-      [_,_,Sg,Sy,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sy,Sg,_,_],
+      [_,_,_,_,_,Sg,Sg,Sg,Sg,Sg,_,_,_,_,_,_],
+      [_,_,_,_,Sg,Sy,Sg,Sg,Sy,Sg,Sg,_,_,_,_,_],
+      [_,_,_,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,_,_,_,_],
+      [_,_,Sg,Sgd,Sg,Sgd,Sg,Sg,Sgd,Sg,Sgd,Sg,Sg,_,_,_],
+      [_,Sg,Sg,Sg,Sgd,Sg,Sg,Sg,Sg,Sgd,Sg,Sg,Sg,_,_,_],
+      [_,Sg,Sy,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sy,Sg,Sg,_,_],
+      [_,_,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,_,_,_],
       [_,_,_,Sg,Sg,Sg,W,B,_,W,B,Sg,Sg,_,_,_],
       [_,_,_,_,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,_,_,_,_],
-      [_,_,_,_,_,Sg,Sgd,R,R,Sgd,Sg,_,_,_,_,_],
+      [_,_,_,_,Sg,Sg,Sgd,R,R,Sgd,Sg,Sg,_,_,_,_],
+      [_,_,_,_,_,Sg,Sg,Sg,Sg,Sg,Sg,_,_,_,_,_],
       [_,_,_,_,_,_,Sg,Sg,Sg,Sg,_,_,_,_,_,_],
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
     ];
 
-    // Snake moving - stretched horizontal
+    // Snake moving - stretched horizontal, thicker body
     this.snake_move = [
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-      [_,Sg,Sg,Sg,_,_,_,_,_,_,_,_,_,_,_,_],
-      [Sg,Sy,Sg,Sy,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,_,_],
-      [Sg,Sg,Sgd,Sg,Sgd,Sg,Sy,Sg,Sgd,Sg,Sy,Sg,W,B,_,_],
-      [_,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,W,B,_,_],
-      [_,_,_,_,Sg,Sg,Sy,Sg,Sgd,Sg,Sy,Sg,Sg,R,R,_],
+      [Sg,Sg,Sg,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [Sg,Sy,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,_,_],
+      [Sg,Sg,Sgd,Sg,Sgd,Sg,Sy,Sg,Sgd,Sg,Sy,Sg,Sg,Sg,Sg,_],
+      [Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,W,B,_],
+      [_,Sg,Sgd,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,W,B,_],
+      [_,_,Sg,Sg,Sg,Sg,Sy,Sg,Sgd,Sg,Sy,Sg,Sg,Sg,R,R],
+      [_,_,_,_,_,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,_,_,_],
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],

@@ -75,7 +75,7 @@ const Player = {
         // Award points for NEW tiles only (not re-claiming green)
         if (oldTile !== TILE_GREEN) {
           const isEnemy = oldTile === TILE_RED || oldTile === TILE_PURPLE || oldTile === TILE_BLUE || oldTile === TILE_SMART;
-          this.addScore(10);
+          this.addScore(1);
           Audio.sfxClaim(isEnemy);
         }
         // Check for bonus item pickup on landing
@@ -150,8 +150,8 @@ const Player = {
   addScore(points) {
     const oldScore = this.score;
     this.score += points;
-    // Extra life every 10000 points
-    if (Math.floor(this.score / 10000) > Math.floor(oldScore / 10000)) {
+    // Extra life every 50000 points
+    if (Math.floor(this.score / 50000) > Math.floor(oldScore / 50000)) {
       this.lives++;
     }
   },

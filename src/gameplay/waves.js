@@ -20,8 +20,8 @@ const Waves = {
     6:  { red: 2, purple: 1 },
     7:  { red: 2, purple: 1, ladybug: 1 },
     8:  { red: 3, purple: 1 },
-    9:  { red: 2, purple: 1, blue: 1 },
-    // Wave 10: zombie wave
+    9:  { red: 2, purple: 1, blue: 1, smart: 1 },
+    // Wave 10: architect wave (smart frogs only)
     11: { red: 2, purple: 1, blue: 1, snake: 1 },
     12: { red: 3, purple: 1, blue: 1, snake: 1 },
     13: { red: 3, purple: 2, blue: 1, ladybug: 1 },
@@ -36,6 +36,7 @@ const Waves = {
 
   // Sky/atmosphere state (day/night cycle)
   isNighttime: false,
+  isArchitectWave: false,
   skyColor: null,       // Set in setupWave; fallback via || in draw code
   skyDarkColor: null,
   waterColor: null,
@@ -107,23 +108,38 @@ const Waves = {
     else if (wave <= 18) this.targetPercent = 0.82;
     else this.targetPercent = 0.85;
 
-    // Zombie waves every 5th wave
-    const isZombieWave = (wave % 5 === 0);
+    // Architect waves every 10th wave (10, 20, 30...) — takes priority over zombie
+    const isArchitectWave = (wave % 10 === 0);
+    // Zombie waves every 5th wave, but NOT on architect waves
+    const isZombieWave = (wave % 5 === 0) && !isArchitectWave;
+    this.isArchitectWave = isArchitectWave;
 
-    // Set sky atmosphere — daytime for normal waves, nighttime for zombie waves
+    // Set sky atmosphere — daytime for normal waves, nighttime for zombie waves, dusk for architect
     this.isNighttime = isZombieWave;
-    this.skyColor = isZombieWave ? PALETTE.SKY_NIGHT : PALETTE.SKY_DAY;
-    this.skyDarkColor = isZombieWave ? PALETTE.SKY_NIGHT_DARK : PALETTE.SKY_DAY_DARK;
-    this.waterColor = isZombieWave ? PALETTE.WATER_BG : PALETTE.WATER_DAY;
+    if (isArchitectWave) {
+      this.skyColor = '#2a1a3a';       // Dusk purple
+      this.skyDarkColor = '#2a1a3a';
+      this.waterColor = '#1a1a2a';
+    } else if (isZombieWave) {
+      this.skyColor = PALETTE.SKY_NIGHT;
+      this.skyDarkColor = PALETTE.SKY_NIGHT_DARK;
+      this.waterColor = PALETTE.WATER_BG;
+    } else {
+      this.skyColor = PALETTE.SKY_DAY;
+      this.skyDarkColor = PALETTE.SKY_DAY_DARK;
+      this.waterColor = PALETTE.WATER_DAY;
+    }
 
-    // Generate stars for nighttime
-    if (isZombieWave) {
+    // Generate stars for nighttime (but not architect waves — they have their own look)
+    if (isZombieWave && !isArchitectWave) {
       this._generateStars();
     } else {
       this.stars = [];
     }
 
-    if (isZombieWave) {
+    if (isArchitectWave) {
+      this._spawnArchitectWave(wave);
+    } else if (isZombieWave) {
       this._spawnZombieWave(wave);
     } else {
       this._spawnWaveEnemies(wave);
@@ -159,8 +175,23 @@ const Waves = {
     }
   },
 
+  // Spawn architect-only wave: smart frogs. Count = wave/10 + 1, so wave 10 = 2, wave 20 = 3, etc.
+  _spawnArchitectWave(wave) {
+    const numArchitects = Math.min(6, 1 + Math.ceil(wave / 10));
+    for (let i = 0; i < numArchitects; i++) {
+      const edge = Math.floor(Math.random() * 4);
+      let col, row;
+      if (edge === 0) { col = Math.floor(Math.random() * GRID_COLS); row = 0; }
+      else if (edge === 1) { col = GRID_COLS - 1; row = Math.floor(Math.random() * GRID_ROWS); }
+      else if (edge === 2) { col = Math.floor(Math.random() * GRID_COLS); row = GRID_ROWS - 1; }
+      else { col = 0; row = Math.floor(Math.random() * GRID_ROWS); }
+      Enemies.queueEnemy('smart', col, row);
+    }
+    Enemies.deployTimer = 2000;
+  },
+
   // Spawn enemies for a normal (non-zombie) wave.
-  // Uses explicit wave table for waves 1-19, formula for 20+.
+  // Enemies enter from edges after a delay — never present at wave start.
   _spawnWaveEnemies(wave) {
     const config = this._waveTable[wave] || this._generateWaveConfig(wave);
     const enemyList = [];
@@ -172,12 +203,18 @@ const Waves = {
       }
     }
 
-    // Get spawn positions and spawn enemies
-    const positions = this._getSpawnPositions(enemyList.length);
+    // Queue all enemies for delayed edge deployment
     for (let i = 0; i < enemyList.length; i++) {
-      const [c, r] = positions[i];
-      Enemies.spawn(enemyList[i], c, r);
+      const edge = Math.floor(Math.random() * 4);
+      let col, row;
+      if (edge === 0) { col = Math.floor(Math.random() * GRID_COLS); row = 0; }
+      else if (edge === 1) { col = GRID_COLS - 1; row = Math.floor(Math.random() * GRID_ROWS); }
+      else if (edge === 2) { col = Math.floor(Math.random() * GRID_COLS); row = GRID_ROWS - 1; }
+      else { col = 0; row = Math.floor(Math.random() * GRID_ROWS); }
+      Enemies.queueEnemy(enemyList[i], col, row);
     }
+    // First enemy deploys after 2 seconds, then every DEPLOY_INTERVAL
+    Enemies.deployTimer = 2000;
   },
 
   // Generate wave config for waves beyond the explicit table.
