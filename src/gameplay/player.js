@@ -122,8 +122,10 @@ const Player = {
   },
 
   die() {
+    if (!this.alive) return; // Prevent double-death
     this.alive = false;
     this.lives--;
+    this.justDied = true; // Flag for main loop to pick up
     Audio.sfxDeath();
   },
 

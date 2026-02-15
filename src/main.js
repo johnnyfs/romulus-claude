@@ -46,19 +46,25 @@ const Game = {
         // Continuously check encirclement (not just on player hop)
         Encircle.checkAll();
 
-        // Collision check (skip if invincible)
-        if (Enemies.checkCollisionWithPlayer() && !Player.isHopping && !Player.invincible) {
-          Player.die();
+        // Check if player died (spike, enemy, etc)
+        if (Player.justDied) {
+          Player.justDied = false;
           this.state = STATE_DYING;
           this.deathTimer = 1500;
           break;
         }
 
-        // Score for claiming tiles
-        // (handled in player landing)
+        // Collision check with enemies (skip if invincible)
+        if (Enemies.checkCollisionWithPlayer() && !Player.isHopping && !Player.invincible) {
+          Player.die();
+          Player.justDied = false;
+          this.state = STATE_DYING;
+          this.deathTimer = 1500;
+          break;
+        }
 
-        // Win condition (only check when not mid-hop and not during fill)
-        if (!Player.isHopping && !Encircle.pendingFill && Waves.checkWinCondition()) {
+        // Win condition: only when not mid-hop, no pending fill, no dying enemies
+        if (!Player.isHopping && !Encircle.pendingFill && Encircle.dyingEnemies.length === 0 && Encircle.bonusPopups.length === 0 && Waves.checkWinCondition()) {
           this.state = STATE_WAVE_CLEAR;
           this.waveClearPhase = CLEAR_SHOW_MESSAGE;
           this.waveClearTimer = 1000; // Show "CLEAR!" for 1 second
