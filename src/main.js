@@ -144,7 +144,7 @@ const Game = {
         HUD.draw();
         if (this.state === STATE_PAUSED) {
           // "PAUSED" = 6 chars * 8 = 48px, center = (256-48)/2 = 104
-          Renderer.drawText('PAUSED', 104, 116, PALETTE.WHITE);
+          Renderer.drawText('PAUSED', 104, 120, PALETTE.WHITE);
         }
         break;
 
@@ -158,7 +158,7 @@ const Game = {
 
         if (this.waveClearPhase === CLEAR_SHOW_MESSAGE) {
           // Phase 1: Show CLEAR! with board visible
-          Renderer.drawText('CLEAR!', 104, 116, PALETTE.GREEN_LIGHT);
+          Renderer.drawText('CLEAR!', 104, 120, PALETTE.GREEN_LIGHT);
         } else if (this.waveClearPhase === CLEAR_BONUS_FILL) {
           // Phase 2: Flash remaining tiles (bonus clear effect)
           if (Math.floor(this.waveClearTimer / 100) % 2) {

@@ -51,8 +51,14 @@ const Player = {
       this.hopTimer -= dt;
       if (this.hopTimer <= 0) {
         this.isHopping = false;
+        // Check if landed on spike — instant death!
+        const landedTile = Grid.get(this.col, this.row);
+        if (landedTile === TILE_SPIKE) {
+          this.die();
+          return;
+        }
         // Claim tile on landing
-        const oldTile = Grid.get(this.col, this.row);
+        const oldTile = landedTile;
         Grid.set(this.col, this.row, TILE_GREEN);
         // Award points for NEW tiles only (not re-claiming green)
         if (oldTile !== TILE_GREEN) {
@@ -73,12 +79,9 @@ const Player = {
       const newRow = this.row + DIR_DY[dir];
       if (Grid.inBounds(newCol, newRow)) {
         const tile = Grid.get(newCol, newRow);
-        // Can't hop onto spike/water
-        // Zombie tiles (TILE_NEUTRAL placed by zombie frogs) block hopping only
-        // if a zombie is actually in the game — otherwise neutral tiles are normal
-        const hasZombies = Enemies.list.some(e => e.type === 'zombie' && e.alive);
-        const isZombieTile = hasZombies && tile === TILE_NEUTRAL && Grid.get(this.col, this.row) !== TILE_NEUTRAL;
-        if (tile !== TILE_SPIKE && tile !== TILE_WATER && !isZombieTile) {
+        // Spike tiles are deadly — can hop onto them but die on landing
+        // Water and zombie tiles block movement entirely
+        if (tile !== TILE_WATER && tile !== TILE_ZOMBIE) {
           this.hopFromCol = this.col;
           this.hopFromRow = this.row;
           this.col = newCol;

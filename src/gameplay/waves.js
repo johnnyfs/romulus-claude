@@ -39,84 +39,64 @@ const Waves = {
     this.snailsSpawned = 0;
 
     const wave = this.current;
-    this.targetPercent = wave <= 2 ? 0.70 : wave <= 6 ? 0.75 : wave <= 10 ? 0.80 : 0.85;
+    this.targetPercent = wave <= 2 ? 0.70 : wave <= 8 ? 0.75 : wave <= 14 ? 0.80 : 0.85;
 
-    // Spawn enemies based on wave (ensuring safe spawn positions)
-    if (wave <= 2) {
-      // 1 red frog
-      if (this.isSafeSpawnPosition(2, 2)) {
-        Enemies.spawn('red', 2, 2);
-      } else {
-        Enemies.spawn('red', 1, 1);
+    // Wave progression:
+    // 1-2: 1 red (tutorial)
+    // 3-4: 2 reds
+    // 5-6: 1 red + 1 purple (chaser intro)
+    // 7-8: 2 red + 1 purple
+    // 9-10: 1 red + 1 purple + 1 blue (teleporter intro)
+    // 11: ZOMBIE WAVE! 2 zombies only (Q*bert style special wave)
+    // 12-13: 1 red + 1 purple + 1 blue + 1 zombie (mix)
+    // 14: ZOMBIE WAVE! 4 zombies
+    // 15+: escalating mix with periodic zombie waves every 5th wave
+
+    const isZombieWave = (wave === 11 || wave === 14 || (wave > 14 && (wave - 14) % 5 === 0));
+
+    if (isZombieWave) {
+      // Special zombie-only wave!
+      const numZombies = wave === 11 ? 2 : wave === 14 ? 4 : Math.min(6, 2 + Math.floor((wave - 14) / 5));
+      const positions = [[2,2],[GRID_COLS-3,2],[2,GRID_ROWS-3],[GRID_COLS-3,GRID_ROWS-3],[4,6],[GRID_COLS-5,6]];
+      for (let i = 0; i < numZombies && i < positions.length; i++) {
+        const [c,r] = positions[i];
+        if (this.isSafeSpawnPosition(c, r)) {
+          Enemies.spawn('zombie', c, r);
+        } else {
+          Enemies.spawn('zombie', c + 1, r + 1);
+        }
       }
+    } else if (wave <= 2) {
+      Enemies.spawn('red', 2, 2);
     } else if (wave <= 4) {
-      // 2 red frogs
-      if (this.isSafeSpawnPosition(2, 2)) {
-        Enemies.spawn('red', 2, 2);
-      } else {
-        Enemies.spawn('red', 1, 1);
-      }
+      Enemies.spawn('red', 2, 2);
       Enemies.spawn('red', GRID_COLS - 3, GRID_ROWS - 3);
     } else if (wave <= 6) {
-      // 1 red + 1 purple
-      if (this.isSafeSpawnPosition(2, 2)) {
-        Enemies.spawn('red', 2, 2);
-      } else {
-        Enemies.spawn('red', 1, 1);
-      }
+      Enemies.spawn('red', 2, 2);
       Enemies.spawn('purple', GRID_COLS - 3, GRID_ROWS - 3);
     } else if (wave <= 8) {
-      // 2 red + 1 purple + (wave 7-8: add zombie)
-      if (this.isSafeSpawnPosition(2, 2)) {
-        Enemies.spawn('red', 2, 2);
-      } else {
-        Enemies.spawn('red', 1, 1);
-      }
+      Enemies.spawn('red', 2, 2);
       Enemies.spawn('red', GRID_COLS - 3, 2);
       Enemies.spawn('purple', GRID_COLS - 3, GRID_ROWS - 3);
-      if (wave >= 7) {
-        Enemies.spawn('zombie', Math.floor(GRID_COLS / 2), 2);
-      }
     } else if (wave <= 10) {
-      // 1 red + 1 purple + 1 blue + 1 zombie
-      if (this.isSafeSpawnPosition(2, 2)) {
-        Enemies.spawn('red', 2, 2);
-      } else {
-        Enemies.spawn('red', 1, 1);
-      }
+      Enemies.spawn('red', 2, 2);
       Enemies.spawn('purple', GRID_COLS - 3, GRID_ROWS - 3);
       Enemies.spawn('blue', 2, GRID_ROWS - 3);
-      Enemies.spawn('zombie', Math.floor(GRID_COLS / 2), 2);
     } else {
-      // 11+: scale up with zombies
-      const numRed = Math.min(3, 1 + Math.floor((wave - 10) / 2));
-      const numPurple = Math.min(2, 1 + Math.floor((wave - 10) / 3));
+      // 12+ (non-zombie): escalating mix
+      const numRed = Math.min(3, 1 + Math.floor((wave - 12) / 3));
+      const numPurple = Math.min(2, 1 + Math.floor((wave - 12) / 4));
       const numBlue = 1;
-      const numZombie = Math.min(2, 1 + Math.floor((wave - 10) / 4));
+      const numZombie = Math.min(2, Math.floor((wave - 12) / 3));
       for (let i = 0; i < numRed; i++) {
-        const col = 1 + i * 4;
-        const row = 1 + i * 2;
-        if (this.isSafeSpawnPosition(col, row)) {
-          Enemies.spawn('red', col, row);
-        } else {
-          Enemies.spawn('red', 0, i);
-        }
+        Enemies.spawn('red', 1 + i * 4, 1 + i * 2);
       }
       for (let i = 0; i < numPurple; i++) {
         Enemies.spawn('purple', GRID_COLS - 2 - i * 4, GRID_ROWS - 2 - i * 2);
       }
-      for (let i = 0; i < numBlue; i++) {
-        const col = Math.floor(GRID_COLS / 2);
-        if (this.isSafeSpawnPosition(col, 1)) {
-          Enemies.spawn('blue', col, 1);
-        } else {
-          Enemies.spawn('blue', col, 0);
-        }
-      }
+      Enemies.spawn('blue', Math.floor(GRID_COLS / 2), 1);
       for (let i = 0; i < numZombie; i++) {
-        const col = 2 + i * 6;
-        const row = Math.floor(GRID_ROWS / 2);
-        Enemies.spawn('zombie', col, row);
+        Enemies.spawn('zombie', 2 + i * 6, Math.floor(GRID_ROWS / 2));
       }
     }
 

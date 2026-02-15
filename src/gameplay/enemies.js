@@ -11,7 +11,7 @@ const Enemies = {
     const tileState = type === 'red' ? TILE_RED :
                      type === 'purple' ? TILE_PURPLE :
                      type === 'blue' ? TILE_BLUE :
-                     type === 'zombie' ? TILE_NEUTRAL : // Zombie uses gray tiles
+                     type === 'zombie' ? TILE_ZOMBIE :
                      TILE_SNAIL;
     const moveInterval = type === 'red' ? 800 :
                         type === 'purple' ? 500 :

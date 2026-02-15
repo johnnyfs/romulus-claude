@@ -60,6 +60,7 @@ const TILE_COLORS = {
   [TILE_BLUE]:    PALETTE.BLUE_DARK,
   [TILE_SPIKE]:   PALETTE.SPIKE_DARK,
   [TILE_WATER]:   PALETTE.WATER_DARK,
+  [TILE_ZOMBIE]:  '#3a3a4a',
 };
 
 // Brighter versions for claimed-tile borders/accents

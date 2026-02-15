@@ -134,31 +134,27 @@ const Encircle = {
           // Flash effect
           this.flashTiles.push({ col: tile.col, row: tile.row, timer: 300 });
 
-          // Award points per tile
-          Player.addScore(2);
+          // Count tiles (scoring happens at end)
           fill.tileCount++;
-
-          // Milestone bonuses every 10 tiles
-          if (fill.tileCount % 10 === 0) {
-            const bonusAmount = fill.tileCount * 10; // 100, 200, 300...
-            const x = tile.col * TILE_SIZE + TILE_SIZE / 2;
-            const y = (tile.row + 1) * TILE_SIZE + TILE_SIZE / 2;
-            this.bonusPopups.push({
-              text: '+' + bonusAmount,
-              x: x,
-              y: y,
-              timer: 800,
-              alpha: 1.0
-            });
-          }
         }
 
         fill.index++;
       }
 
-      // If fill is complete, handle enemies and cleanup
+      // If fill is complete, handle scoring in order
       if (fill.index >= fill.queue.length) {
-        // Kill enemies and start their death animations
+        // Calculate center of filled region
+        let centerCol = 0, centerRow = 0;
+        for (const tile of fill.queue) {
+          centerCol += tile.col;
+          centerRow += tile.row;
+        }
+        centerCol = Math.floor(centerCol / fill.queue.length);
+        centerRow = Math.floor(centerRow / fill.queue.length);
+        const centerX = centerCol * TILE_SIZE + TILE_SIZE / 2;
+        const centerY = (centerRow + 1) * TILE_SIZE + TILE_SIZE / 2;
+
+        // 1. Kill enemies with death animations + score per enemy
         for (const enemy of fill.enemies) {
           enemy.alive = false;
           this.dyingEnemies.push({
@@ -170,29 +166,30 @@ const Encircle = {
           });
         }
 
-        // Check for 100% fill
+        // 2. ONE total fill bonus based on tile count
+        const fillBonus = fill.tileCount * 2 * this.fillComboMultiplier;
+        Player.addScore(fillBonus);
+        let popupText = '+' + fillBonus;
+        if (this.fillComboMultiplier > 1) {
+          popupText += ' x' + this.fillComboMultiplier;
+        }
+        this.bonusPopups.push({
+          text: popupText,
+          x: centerX,
+          y: centerY,
+          timer: 1200,
+          alpha: 1.0
+        });
+
+        // 3. Check for 100% fill → PERFECT
         const fillPercent = Grid.fillPercent(TILE_GREEN);
         if (fillPercent >= 1.0) {
           Player.addScore(5000);
-          if (Audio.sfxPerfect) {
-            Audio.sfxPerfect();
-          }
-          // Calculate center of region for PERFECT popup
-          let centerCol = 0;
-          let centerRow = 0;
-          for (const tile of fill.queue) {
-            centerCol += tile.col;
-            centerRow += tile.row;
-          }
-          centerCol = Math.floor(centerCol / fill.queue.length);
-          centerRow = Math.floor(centerRow / fill.queue.length);
-          const centerX = centerCol * TILE_SIZE + TILE_SIZE / 2;
-          const centerY = (centerRow + 1) * TILE_SIZE + TILE_SIZE / 2;
-
+          if (Audio.sfxPerfect) Audio.sfxPerfect();
           this.bonusPopups.push({
             text: 'PERFECT!',
             x: centerX,
-            y: centerY - 20,
+            y: centerY - 16,
             timer: 1500,
             alpha: 1.0
           });
