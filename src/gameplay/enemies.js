@@ -8,8 +8,15 @@ const Enemies = {
 
   // Spawn an enemy frog of given type at given position
   spawn(type, col, row) {
-    const tileState = type === 'red' ? TILE_RED : type === 'purple' ? TILE_PURPLE : type === 'blue' ? TILE_BLUE : TILE_SNAIL;
-    const moveInterval = type === 'red' ? 800 : type === 'purple' ? 500 : type === 'snail' ? 1500 : 700;
+    const tileState = type === 'red' ? TILE_RED :
+                     type === 'purple' ? TILE_PURPLE :
+                     type === 'blue' ? TILE_BLUE :
+                     type === 'zombie' ? TILE_NEUTRAL : // Zombie uses gray tiles
+                     TILE_SNAIL;
+    const moveInterval = type === 'red' ? 800 :
+                        type === 'purple' ? 500 :
+                        type === 'zombie' ? 700 :
+                        type === 'snail' ? 1500 : 700;
     this.list.push({
       type,
       col,
@@ -26,7 +33,7 @@ const Enemies = {
       doubleHopChance: type === 'purple' ? 0.3 : 0, // 30% chance purple hops twice
       doubleHopQueued: false,
     });
-    // Claim starting tile (snails convert tiles to spike)
+    // Claim starting tile (snails convert tiles to spike, zombies use gray)
     if (type === 'snail') {
       Grid.set(col, row, TILE_SPIKE);
     } else {

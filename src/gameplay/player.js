@@ -73,8 +73,10 @@ const Player = {
       const newRow = this.row + DIR_DY[dir];
       if (Grid.inBounds(newCol, newRow)) {
         const tile = Grid.get(newCol, newRow);
-        // Can't hop onto spike/water
-        if (tile !== TILE_SPIKE && tile !== TILE_WATER) {
+        // Can't hop onto spike/water, and can't claim gray tiles directly (zombie tiles)
+        // Gray tiles can only be turned green via encirclement
+        const isZombieTile = tile === TILE_NEUTRAL && Grid.get(this.col, this.row) !== TILE_NEUTRAL;
+        if (tile !== TILE_SPIKE && tile !== TILE_WATER && !isZombieTile) {
           this.hopFromCol = this.col;
           this.hopFromRow = this.row;
           this.col = newCol;

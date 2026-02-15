@@ -3,6 +3,7 @@ const Game = {
   state: STATE_TITLE,
   lastTime: 0,
   waveClearTimer: 0,
+  waveClearPhase: 0,
   deathTimer: 0,
   highScore: 0,
 
@@ -55,10 +56,11 @@ const Game = {
         // Score for claiming tiles
         // (handled in player landing)
 
-        // Win condition (only check when not mid-hop)
-        if (!Player.isHopping && Waves.checkWinCondition()) {
+        // Win condition (only check when not mid-hop and not during fill)
+        if (!Player.isHopping && !Encircle.pendingFill && Waves.checkWinCondition()) {
           this.state = STATE_WAVE_CLEAR;
-          this.waveClearTimer = 2000;
+          this.waveClearPhase = CLEAR_SHOW_MESSAGE;
+          this.waveClearTimer = 1000; // Show "CLEAR!" for 1 second
           Audio.sfxWaveClear();
           // Time bonus
           Player.addScore(500);
@@ -68,8 +70,24 @@ const Game = {
       case STATE_WAVE_CLEAR:
         this.waveClearTimer -= dt;
         if (this.waveClearTimer <= 0) {
-          Waves.nextWave();
-          this.state = STATE_PLAYING;
+          if (this.waveClearPhase === CLEAR_SHOW_MESSAGE) {
+            // Phase 1 done, start bonus clear phase
+            this.waveClearPhase = CLEAR_BONUS_FILL;
+            this.waveClearTimer = 800; // Brief bonus fill flash
+            // Clear remaining enemies (they escaped)
+            for (const enemy of Enemies.list) {
+              enemy.alive = false;
+            }
+            Enemies.cleanup();
+          } else if (this.waveClearPhase === CLEAR_BONUS_FILL) {
+            // Phase 2 done, show wave number
+            this.waveClearPhase = CLEAR_SHOW_WAVE;
+            this.waveClearTimer = 1200;
+          } else {
+            // Phase 3 done, next wave
+            Waves.nextWave();
+            this.state = STATE_PLAYING;
+          }
         }
         break;
 
@@ -130,10 +148,33 @@ const Game = {
 
       case STATE_WAVE_CLEAR:
         Grid.draw();
+        Enemies.draw(); // Show enemies during phase 1
         Player.draw();
+        Encircle.draw();
         HUD.draw();
-        Renderer.drawText('WAVE ' + Waves.current, 88, 108, PALETTE.GREEN);
-        Renderer.drawText('CLEAR!', 104, 120, PALETTE.GREEN_LIGHT);
+
+        if (this.waveClearPhase === CLEAR_SHOW_MESSAGE) {
+          // Phase 1: Show CLEAR! with board visible
+          Renderer.drawText('CLEAR!', 104, 116, PALETTE.GREEN_LIGHT);
+        } else if (this.waveClearPhase === CLEAR_BONUS_FILL) {
+          // Phase 2: Flash remaining tiles (bonus clear effect)
+          if (Math.floor(this.waveClearTimer / 100) % 2) {
+            // Draw white flash over non-green tiles
+            for (let r = 0; r < GRID_ROWS; r++) {
+              for (let c = 0; c < GRID_COLS; c++) {
+                if (Grid.get(c, r) !== TILE_GREEN) {
+                  const x = c * TILE_SIZE;
+                  const y = (r + 1) * TILE_SIZE;
+                  Renderer.fillRect(x, y, TILE_SIZE, TILE_SIZE, 'rgba(255, 255, 255, 0.6)');
+                }
+              }
+            }
+          }
+        } else {
+          // Phase 3: Show wave number
+          Renderer.drawText('WAVE ' + Waves.current, 88, 108, PALETTE.GREEN);
+          Renderer.drawText('COMPLETE', 96, 120, PALETTE.GREEN_LIGHT);
+        }
         break;
 
       case STATE_DYING:

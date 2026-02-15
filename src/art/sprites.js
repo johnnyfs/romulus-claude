@@ -288,6 +288,49 @@ const Sprites = {
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
     ];
 
+    // ZOMBIE FROG - Gray, hunched, red eyes
+    const Z = PALETTE.NEUTRAL;
+    const Zd = PALETTE.HUD_TEXT; // Darker gray
+    const ZE = PALETTE.RED; // Red eyes instead of yellow
+
+    this.zombie_frog_idle = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,ZE,ZE,_,_,_,_,ZE,ZE,_,_,_,_],
+      [_,_,_,ZE,ZE,B,ZE,_,_,ZE,B,ZE,ZE,_,_,_],
+      [_,_,_,ZE,ZE,ZE,Z,Z,Z,Z,ZE,ZE,ZE,_,_,_],
+      [_,_,_,_,Z,Z,Z,Z,Z,Z,Z,Z,_,_,_,_],
+      [_,_,_,Z,Z,Zd,Z,Z,Z,Z,Zd,Z,Z,_,_,_],
+      [_,_,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,_,_],
+      [_,_,Z,Z,Z,B,B,B,B,B,B,Z,Z,Z,_,_],
+      [_,_,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,_,_],
+      [_,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,_],
+      [_,Z,Z,Zd,Z,Z,Z,Z,Z,Z,Z,Z,Zd,Z,Z,_],
+      [_,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,_],
+      [_,_,Z,Z,_,Z,Z,Z,Z,Z,Z,_,Z,Z,_,_],
+      [_,_,Z,Z,_,_,Z,Z,Z,Z,_,_,Z,Z,_,_],
+      [_,Z,Z,_,_,_,_,_,_,_,_,_,_,Z,Z,_],
+      [Z,Z,Zd,_,_,_,_,_,_,_,_,_,_,Zd,Z,Z],
+    ];
+
+    this.zombie_frog_hop = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,ZE,ZE,_,_,_,_,ZE,ZE,_,_,_,_],
+      [_,_,_,ZE,ZE,B,ZE,_,_,ZE,B,ZE,ZE,_,_,_],
+      [_,_,_,ZE,ZE,ZE,Z,Z,Z,Z,ZE,ZE,ZE,_,_,_],
+      [_,_,_,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,_,_,_],
+      [_,_,Z,Z,Zd,Z,Z,Z,Z,Z,Z,Zd,Z,Z,_,_],
+      [_,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,_],
+      [_,Z,Z,B,B,B,B,B,B,B,B,B,B,Z,Z,_],
+      [_,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,_],
+      [Z,Z,Z,Zd,Z,Z,Z,Z,Z,Z,Z,Z,Zd,Z,Z,Z],
+      [Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z],
+      [Z,Z,_,Z,Z,Z,Z,Z,Z,Z,Z,Z,Z,_,Z,Z],
+      [Z,_,_,_,Z,Z,_,_,_,_,Z,Z,_,_,_,Z],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
     // No outlines — clean solid sprites for authentic NES look
   },
 
@@ -297,6 +340,7 @@ const Sprites = {
     if (type === 'red') return isHopping ? this.red_frog_hop : this.red_frog_idle;
     if (type === 'purple') return isHopping ? this.purple_frog_hop : this.purple_frog_idle;
     if (type === 'blue') return isHopping ? this.blue_frog_hop : this.blue_frog_idle;
+    if (type === 'zombie') return isHopping ? this.zombie_frog_hop : this.zombie_frog_idle;
     if (type === 'snail') return this.snail;
     return this.maripoga_idle;
   },
