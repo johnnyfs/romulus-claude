@@ -16,6 +16,7 @@ const TILE_PURPLE = 3;  // Purple frog
 const TILE_BLUE = 4;    // Blue frog
 const TILE_SPIKE = 5;   // Hazard
 const TILE_WATER = 6;   // Hazard
+const TILE_SNAIL = 7;   // Snail entity
 
 // Directions
 const DIR_NONE = -1;

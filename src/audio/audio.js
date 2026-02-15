@@ -410,4 +410,22 @@ const Audio = {
       this.musicNodes = null;
     }
   },
+
+  // Placeholder for hurry up sound (to be implemented by Audio V5)
+  sfxHurryUp() {
+    // Basic hurry up warning sound
+    this.playNote(880, 0, 0.2, 'square', 0.2, 0.01, 0.05);
+    this.playNote(880, 0.25, 0.2, 'square', 0.2, 0.01, 0.05);
+    this.playNote(880, 0.5, 0.3, 'square', 0.25, 0.01, 0.1);
+  },
+
+  // Placeholder for perfect fill sound (to be implemented by Audio V5)
+  sfxPerfect() {
+    // Triumphant perfect sound
+    const melody = [523, 659, 784, 1047]; // C, E, G, high C
+    melody.forEach((freq, i) => {
+      this.playNote(freq, i * 0.1, 0.2, 'square', 0.2, 0.01, 0.08);
+      this.playNote(freq * 1.5, i * 0.1 + 0.05, 0.15, 'triangle', 0.15, 0.01, 0.06);
+    });
+  },
 };

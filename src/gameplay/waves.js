@@ -3,6 +3,9 @@ const Waves = {
   current: 1,
   targetPercent: 0.70,
   timer: 0,
+  waveStartTime: 0,
+  hurryUpPlayed: false,
+  snailsSpawned: 0,
 
   init() {
     this.current = 1;
@@ -31,6 +34,9 @@ const Waves = {
     Enemies.init();
     Grid.init();
     Player.reset();
+    this.waveStartTime = performance.now();
+    this.hurryUpPlayed = false;
+    this.snailsSpawned = 0;
 
     const wave = this.current;
     this.targetPercent = wave <= 2 ? 0.70 : wave <= 6 ? 0.75 : wave <= 10 ? 0.80 : 0.85;
@@ -110,6 +116,51 @@ const Waves = {
         enemy.moveInterval = Math.max(300, enemy.moveInterval - (wave - 4) * 30);
       }
     }
+  },
+
+  // Update wave timer and spawn snails
+  update(dt) {
+    const elapsedTime = performance.now() - this.waveStartTime;
+
+    // Hurry up warning at 30 seconds
+    if (elapsedTime >= 30000 && !this.hurryUpPlayed) {
+      this.hurryUpPlayed = true;
+      if (Audio.sfxHurryUp) {
+        Audio.sfxHurryUp();
+      }
+    }
+
+    // Spawn snails at 35s, 45s, 55s
+    if (elapsedTime >= 35000 && this.snailsSpawned === 0) {
+      this._spawnSnail();
+      this.snailsSpawned++;
+    } else if (elapsedTime >= 45000 && this.snailsSpawned === 1) {
+      this._spawnSnail();
+      this.snailsSpawned++;
+    } else if (elapsedTime >= 55000 && this.snailsSpawned === 2) {
+      this._spawnSnail();
+      this.snailsSpawned++;
+    }
+  },
+
+  // Spawn a snail at a random edge position
+  _spawnSnail() {
+    const edge = Math.floor(Math.random() * 4); // 0=top, 1=right, 2=bottom, 3=left
+    let col, row;
+    if (edge === 0) {
+      col = Math.floor(Math.random() * GRID_COLS);
+      row = 0;
+    } else if (edge === 1) {
+      col = GRID_COLS - 1;
+      row = Math.floor(Math.random() * GRID_ROWS);
+    } else if (edge === 2) {
+      col = Math.floor(Math.random() * GRID_COLS);
+      row = GRID_ROWS - 1;
+    } else {
+      col = 0;
+      row = Math.floor(Math.random() * GRID_ROWS);
+    }
+    Enemies.spawn('snail', col, row);
   },
 
   // Check if wave is complete
