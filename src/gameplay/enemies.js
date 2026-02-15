@@ -50,7 +50,13 @@ const Enemies = {
         enemy.hopTimer -= dt;
         if (enemy.hopTimer <= 0) {
           enemy.isHopping = false;
-          Grid.set(enemy.col, enemy.row, enemy.tileState);
+          // Snails convert tiles to spike permanently on landing
+          if (enemy.type === 'snail') {
+            Grid.set(enemy.col, enemy.row, TILE_SPIKE);
+            if (Audio.sfxSnailMove) Audio.sfxSnailMove();
+          } else {
+            Grid.set(enemy.col, enemy.row, enemy.tileState);
+          }
         }
         continue;
       }

@@ -12,6 +12,10 @@ const Renderer = {
     this.canvas.style.height = (SCREEN_HEIGHT * SCALE) + 'px';
     this.ctx = this.canvas.getContext('2d');
     this.ctx.imageSmoothingEnabled = false;
+    // Ensure canvas can receive keyboard events
+    this.canvas.tabIndex = 0;
+    this.canvas.style.outline = 'none';
+    this.canvas.focus();
 
     // Create CRT scanline overlay
     this.createCRTOverlay();
@@ -26,6 +30,7 @@ const Renderer = {
     this.crtOverlay.style.width = (SCREEN_WIDTH * SCALE) + 'px';
     this.crtOverlay.style.height = (SCREEN_HEIGHT * SCALE) + 'px';
     this.crtOverlay.style.pointerEvents = 'none';
+    this.crtOverlay.style.userSelect = 'none';
     this.crtOverlay.style.zIndex = '10';
     this.crtOverlay.style.background = 'repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px)';
     this.crtOverlay.style.boxShadow = 'inset 0 0 100px rgba(0,0,0,0.5)';
