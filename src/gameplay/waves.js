@@ -66,7 +66,7 @@ const Waves = {
       }
       Enemies.spawn('purple', GRID_COLS - 3, GRID_ROWS - 3);
     } else if (wave <= 8) {
-      // 2 red + 1 purple
+      // 2 red + 1 purple + (wave 7-8: add zombie)
       if (this.isSafeSpawnPosition(2, 2)) {
         Enemies.spawn('red', 2, 2);
       } else {
@@ -74,8 +74,11 @@ const Waves = {
       }
       Enemies.spawn('red', GRID_COLS - 3, 2);
       Enemies.spawn('purple', GRID_COLS - 3, GRID_ROWS - 3);
+      if (wave >= 7) {
+        Enemies.spawn('zombie', Math.floor(GRID_COLS / 2), 2);
+      }
     } else if (wave <= 10) {
-      // 1 red + 1 purple + 1 blue
+      // 1 red + 1 purple + 1 blue + 1 zombie
       if (this.isSafeSpawnPosition(2, 2)) {
         Enemies.spawn('red', 2, 2);
       } else {
@@ -83,11 +86,13 @@ const Waves = {
       }
       Enemies.spawn('purple', GRID_COLS - 3, GRID_ROWS - 3);
       Enemies.spawn('blue', 2, GRID_ROWS - 3);
+      Enemies.spawn('zombie', Math.floor(GRID_COLS / 2), 2);
     } else {
-      // 11+: scale up
+      // 11+: scale up with zombies
       const numRed = Math.min(3, 1 + Math.floor((wave - 10) / 2));
       const numPurple = Math.min(2, 1 + Math.floor((wave - 10) / 3));
       const numBlue = 1;
+      const numZombie = Math.min(2, 1 + Math.floor((wave - 10) / 4));
       for (let i = 0; i < numRed; i++) {
         const col = 1 + i * 4;
         const row = 1 + i * 2;
@@ -107,6 +112,11 @@ const Waves = {
         } else {
           Enemies.spawn('blue', col, 0);
         }
+      }
+      for (let i = 0; i < numZombie; i++) {
+        const col = 2 + i * 6;
+        const row = Math.floor(GRID_ROWS / 2);
+        Enemies.spawn('zombie', col, row);
       }
     }
 
