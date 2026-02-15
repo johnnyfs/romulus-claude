@@ -155,8 +155,8 @@ const Game = {
 
       case STATE_PLAYING:
       case STATE_PAUSED:
-        Decoration.draw();
         Grid.draw();
+        Decoration.draw();
         Enemies.draw();
         Player.draw();
         Encircle.draw();
@@ -168,8 +168,8 @@ const Game = {
         break;
 
       case STATE_WAVE_CLEAR:
-        Decoration.draw();
         Grid.draw();
+        Decoration.draw();
         Enemies.draw(); // Show enemies during phase 1
         Player.draw();
         Encircle.draw();
@@ -186,7 +186,7 @@ const Game = {
               for (let c = 0; c < GRID_COLS; c++) {
                 if (Grid.get(c, r) !== TILE_GREEN) {
                   const x = c * TILE_SIZE;
-                  const y = (r + 1) * TILE_SIZE;
+                  const y = (r + GRID_OFFSET_Y) * TILE_SIZE;
                   Renderer.fillRect(x, y, TILE_SIZE, TILE_SIZE, 'rgba(255, 255, 255, 0.6)');
                 }
               }
@@ -200,8 +200,8 @@ const Game = {
         break;
 
       case STATE_DYING:
-        Decoration.draw();
         Grid.draw();
+        Decoration.draw();
         Enemies.draw();
         HUD.draw();
         const deathPos = Player.getPixelPos();

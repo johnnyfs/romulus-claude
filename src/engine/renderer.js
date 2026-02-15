@@ -59,7 +59,7 @@ const Renderer = {
   // Draw a single tile at grid position — solid color, authentic NES style
   drawTile(col, row, color) {
     const x = col * TILE_SIZE;
-    const y = (row + 1) * TILE_SIZE; // +1 to skip HUD row
+    const y = (row + GRID_OFFSET_Y) * TILE_SIZE; // Skip HUD + decoration row
     this.ctx.fillStyle = color;
     this.ctx.fillRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
   },

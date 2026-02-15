@@ -43,6 +43,14 @@ const PALETTE = {
   HUD_TEXT:    '#d0d0d0',
   SCORE_COLOR: '#4ade80',
 
+  // Water / Swamp background
+  WATER_BG:    '#0a1520',
+  NEUTRAL_HI:  '#353545',
+
+  // Decoration — reeds
+  REED_GREEN:  '#1a3d2e',
+  REED_BROWN:  '#3a2810',
+
   // Character accents
   SKIN:        '#f5c87a',
   SCARF:       '#ef4444',

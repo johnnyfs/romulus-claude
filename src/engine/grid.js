@@ -69,7 +69,7 @@ const Grid = {
         // Draw accent border on claimed tiles
         if (state !== TILE_NEUTRAL && TILE_ACCENT_COLORS[state]) {
           const x = c * TILE_SIZE;
-          const y = (r + 1) * TILE_SIZE;
+          const y = (r + GRID_OFFSET_Y) * TILE_SIZE;
           Renderer.fillRect(x + 1, y + 1, TILE_SIZE - 2, 1, TILE_ACCENT_COLORS[state]);
           Renderer.fillRect(x + 1, y + 1, 1, TILE_SIZE - 2, TILE_ACCENT_COLORS[state]);
         }
