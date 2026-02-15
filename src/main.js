@@ -11,6 +11,7 @@ const Game = {
     Input.init();
     Audio.init();
     Sprites.init();
+    Decoration.init();
     this.state = STATE_TITLE;
   },
 
@@ -117,6 +118,7 @@ const Game = {
 
       case STATE_PLAYING:
       case STATE_PAUSED:
+        Decoration.draw();
         Grid.draw();
         Enemies.draw();
         Player.draw();
@@ -129,6 +131,7 @@ const Game = {
         break;
 
       case STATE_WAVE_CLEAR:
+        Decoration.draw();
         Grid.draw();
         Player.draw();
         HUD.draw();
@@ -137,6 +140,7 @@ const Game = {
         break;
 
       case STATE_DYING:
+        Decoration.draw();
         Grid.draw();
         Enemies.draw();
         HUD.draw();
