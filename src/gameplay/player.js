@@ -72,9 +72,6 @@ const Player = {
       return;
     }
 
-    // Don't accept input if wave is won (waiting for animations)
-    if (Waves.checkWinCondition()) return;
-
     // Read input
     const dir = Input.getDirection();
     if (dir !== DIR_NONE) {

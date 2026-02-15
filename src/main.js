@@ -39,6 +39,22 @@ const Game = {
           break;
         }
 
+        // When a fill is in progress or dying enemies are playing,
+        // FREEZE all movement — only update the encircle animations
+        const animating = Encircle.pendingFill || Encircle.dyingEnemies.length > 0;
+        if (animating) {
+          Encircle.update(dt);
+          // Also check for wave clear after animations done
+          if (!Encircle.pendingFill && Encircle.dyingEnemies.length === 0 && Encircle.bonusPopups.length === 0 && Waves.checkWinCondition()) {
+            this.state = STATE_WAVE_CLEAR;
+            this.waveClearPhase = CLEAR_SHOW_MESSAGE;
+            this.waveClearTimer = 1000;
+            Audio.sfxWaveClear();
+            Player.addScore(500);
+          }
+          break;
+        }
+
         Player.update(dt);
         Enemies.update(dt);
         Encircle.update(dt);
@@ -63,13 +79,12 @@ const Game = {
           break;
         }
 
-        // Win condition: only when not mid-hop, no pending fill, no dying enemies
-        if (!Player.isHopping && !Encircle.pendingFill && Encircle.dyingEnemies.length === 0 && Encircle.bonusPopups.length === 0 && Waves.checkWinCondition()) {
+        // Win condition check (non-animating path)
+        if (!Player.isHopping && Waves.checkWinCondition()) {
           this.state = STATE_WAVE_CLEAR;
           this.waveClearPhase = CLEAR_SHOW_MESSAGE;
-          this.waveClearTimer = 1000; // Show "CLEAR!" for 1 second
+          this.waveClearTimer = 1000;
           Audio.sfxWaveClear();
-          // Time bonus
           Player.addScore(500);
         }
         break;
