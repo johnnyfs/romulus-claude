@@ -10,7 +10,7 @@ const Input = {
       }
       this.keys[e.code] = true;
       // Prevent arrow key scrolling
-      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) {
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','Tab'].includes(e.code)) {
         e.preventDefault();
       }
     });

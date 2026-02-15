@@ -6,6 +6,7 @@ const Waves = {
   waveStartTime: 0,
   hurryUpPlayed: false,
   snailsSpawned: 0,
+  zombieLevel: 0, // 0 = normal, 1 = after wave 5 (enemy tiles need 2 hops), 2 = after wave 15 (3 hops)
 
   // Explicit wave table: each entry lists enemy counts by type.
   // Every wave is harder than the last (more enemies, new types, or higher fill%).
@@ -22,16 +23,16 @@ const Waves = {
     8:  { red: 3, purple: 1 },
     9:  { red: 2, purple: 1, blue: 1, smart: 1 },
     // Wave 10: architect wave (smart frogs only)
-    11: { red: 2, purple: 1, blue: 1, snake: 1 },
-    12: { red: 3, purple: 1, blue: 1, snake: 1 },
-    13: { red: 3, purple: 2, blue: 1, ladybug: 1 },
-    14: { red: 3, purple: 2, blue: 1, snake: 1, smart: 1 },
+    11: { red: 2, purple: 1, blue: 1, snake: 1, smart: 1 },   // +architect (cityscape)
+    12: { red: 3, purple: 1, blue: 1, snake: 1, smart: 1 },
+    13: { red: 3, purple: 2, blue: 1, ladybug: 1, smart: 1 },
+    14: { red: 3, purple: 2, blue: 1, snake: 1, smart: 2 },
     // Wave 15: zombie wave
-    16: { red: 3, purple: 2, blue: 2, snake: 1, smart: 1 },
-    17: { red: 4, purple: 2, blue: 2, snake: 1, ladybug: 1 },
-    18: { red: 4, purple: 2, blue: 2, snake: 2, smart: 1 },
-    19: { red: 4, purple: 3, blue: 2, snake: 2, smart: 1, ladybug: 1 },
-    // Wave 20: zombie wave
+    16: { red: 3, purple: 2, blue: 2, snake: 1, smart: 2 },
+    17: { red: 4, purple: 2, blue: 2, snake: 1, smart: 1, ladybug: 1 },
+    18: { red: 4, purple: 2, blue: 2, snake: 2, smart: 2 },
+    19: { red: 4, purple: 3, blue: 2, snake: 2, smart: 2, ladybug: 1 },
+    // Wave 20: architect-only wave (3 architects)
   },
 
   // Sky/atmosphere state (day/night cycle)
@@ -108,36 +109,51 @@ const Waves = {
     else if (wave <= 18) this.targetPercent = 0.82;
     else this.targetPercent = 0.85;
 
-    // Architect waves every 10th wave (10, 20, 30...) — takes priority over zombie
-    const isArchitectWave = (wave % 10 === 0);
-    // Zombie waves every 5th wave, but NOT on architect waves
-    const isZombieWave = (wave % 5 === 0) && !isArchitectWave;
+    // Wave progression logic:
+    // Waves 1-4: normal (reeds/lilypads)
+    // Wave 5: zombie wave (night)
+    // Waves 6-9: normal
+    // Wave 10: first architect wave (cityscape, smart frogs only)
+    // Waves 11+: ALWAYS cityscape. Mix of enemies including architects.
+    // Wave 15: zombie wave (night)
+    // Wave 20: architect-only wave
+    const isArchitectWave = (wave >= 10); // Cityscape from wave 10 onward
+    const isZombieWave = (wave === 5 || wave === 15 || (wave > 15 && wave % 10 === 5));
+    const isArchitectOnlyWave = (wave % 10 === 0 && wave >= 10); // Pure architect waves (10, 20, 30...)
     this.isArchitectWave = isArchitectWave;
 
-    // Set sky atmosphere — daytime for normal waves, nighttime for zombie waves, dusk for architect
+    // Zombie evolution level — persists after zombie waves
+    if (wave > 15) this.zombieLevel = 2;
+    else if (wave > 5) this.zombieLevel = 1;
+    else this.zombieLevel = 0;
+
+    // Set sky atmosphere
     this.isNighttime = isZombieWave;
-    if (isArchitectWave) {
-      this.skyColor = '#2a1a3a';       // Dusk purple
-      this.skyDarkColor = '#2a1a3a';
-      this.waterColor = '#1a1a2a';
-    } else if (isZombieWave) {
+    if (isZombieWave) {
+      // Zombie waves: night sky
       this.skyColor = PALETTE.SKY_NIGHT;
       this.skyDarkColor = PALETTE.SKY_NIGHT_DARK;
       this.waterColor = PALETTE.WATER_BG;
+    } else if (isArchitectWave) {
+      // Architect/cityscape waves (10+): dusk purple
+      this.skyColor = '#2a1a3a';
+      this.skyDarkColor = '#2a1a3a';
+      this.waterColor = '#1a1a2a';
     } else {
+      // Normal daytime waves (1-9 except 5)
       this.skyColor = PALETTE.SKY_DAY;
       this.skyDarkColor = PALETTE.SKY_DAY_DARK;
       this.waterColor = PALETTE.WATER_DAY;
     }
 
-    // Generate stars for nighttime (but not architect waves — they have their own look)
-    if (isZombieWave && !isArchitectWave) {
+    // Generate stars for nighttime zombie waves
+    if (isZombieWave) {
       this._generateStars();
     } else {
       this.stars = [];
     }
 
-    if (isArchitectWave) {
+    if (isArchitectOnlyWave) {
       this._spawnArchitectWave(wave);
     } else if (isZombieWave) {
       this._spawnZombieWave(wave);
@@ -187,7 +203,7 @@ const Waves = {
       else { col = 0; row = Math.floor(Math.random() * GRID_ROWS); }
       Enemies.queueEnemy('smart', col, row);
     }
-    Enemies.deployTimer = 2000;
+    Enemies.startDeployment();
   },
 
   // Spawn enemies for a normal (non-zombie) wave.
@@ -213,8 +229,8 @@ const Waves = {
       else { col = 0; row = Math.floor(Math.random() * GRID_ROWS); }
       Enemies.queueEnemy(enemyList[i], col, row);
     }
-    // First enemy deploys after 2 seconds, then every DEPLOY_INTERVAL
-    Enemies.deployTimer = 2000;
+    // Start smart deployment: frogs on 5s interval, non-frogs interleaved between
+    Enemies.startDeployment();
   },
 
   // Generate wave config for waves beyond the explicit table.

@@ -7,6 +7,8 @@ const Game = {
   deathTimer: 0,
   highScore: 0,
   lastClearBonus: 0, // Stored for display during clear phase
+  debugWaveSelect: false, // Tab toggles wave select on title screen
+  debugWaveNum: 1, // Selected wave number for debug start
 
   init() {
     Renderer.init();
@@ -17,11 +19,12 @@ const Game = {
     this.state = STATE_TITLE;
   },
 
-  start() {
+  start(startWave) {
     Player.lives = 3;
     Player.score = 0;
     Bonuses.init();
-    Waves.init();
+    Waves.current = startWave || 1;
+    Waves.setupWave();
     this.state = STATE_PLAYING;
     Audio.startMusic();
   },
@@ -29,8 +32,29 @@ const Game = {
   update(dt) {
     switch (this.state) {
       case STATE_TITLE:
+        // Tab toggles debug wave select
+        if (Input.wasPressed('Tab')) {
+          this.debugWaveSelect = !this.debugWaveSelect;
+          this.debugWaveNum = 1;
+        }
+        if (this.debugWaveSelect) {
+          // Arrow up/down to change wave number
+          if (Input.wasPressed('ArrowUp') || Input.wasPressed('KeyW')) {
+            this.debugWaveNum = Math.min(99, this.debugWaveNum + 1);
+          }
+          if (Input.wasPressed('ArrowDown') || Input.wasPressed('KeyS')) {
+            this.debugWaveNum = Math.max(1, this.debugWaveNum - 1);
+          }
+          if (Input.wasPressed('ArrowRight') || Input.wasPressed('KeyD')) {
+            this.debugWaveNum = Math.min(99, this.debugWaveNum + 5);
+          }
+          if (Input.wasPressed('ArrowLeft') || Input.wasPressed('KeyA')) {
+            this.debugWaveNum = Math.max(1, this.debugWaveNum - 5);
+          }
+        }
         if (Input.wasPressed('Enter') || Input.wasPressed('Space')) {
-          this.start();
+          this.start(this.debugWaveSelect ? this.debugWaveNum : 1);
+          this.debugWaveSelect = false;
         }
         break;
 
@@ -284,6 +308,16 @@ const Game = {
     Renderer.drawText('PRESS ENTER', 84, 160, PALETTE.HUD_TEXT);
     // "ARROWS TO HOP" = 13*8 = 104, center = 76
     Renderer.drawText('ARROWS TO HOP', 76, 180, PALETTE.NEUTRAL);
+
+    // Debug wave select (Tab to toggle)
+    if (this.debugWaveSelect) {
+      Renderer.fillRect(60, 196, 136, 28, 'rgba(0,0,0,0.8)');
+      Renderer.drawText('WAVE SELECT', 84, 200, PALETTE.GOLD || '#ffd700');
+      const waveText = 'WAVE ' + String(this.debugWaveNum).padStart(2, '0');
+      Renderer.drawText(waveText, 96, 212, PALETTE.WHITE);
+    } else {
+      Renderer.drawText('TAB=DEBUG', 92, 224, PALETTE.NEUTRAL);
+    }
   },
 
   // Main loop

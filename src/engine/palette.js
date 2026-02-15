@@ -99,6 +99,7 @@ const TILE_COLORS = {
   [TILE_WATER]:   PALETTE.WATER_DARK,
   [TILE_ZOMBIE]:  '#3a3a4a',
   [TILE_SMART]:   PALETTE.SMART_DARK,
+  [TILE_HALFCLEAR]: '#454560',
 };
 
 // Brighter versions for claimed-tile borders/accents

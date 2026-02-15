@@ -1,18 +1,34 @@
-// Enemy frog system - with snake, ladybug, smart frog, and deployment queue
+// Enemy frog system - with snake, ladybug, smart frog, and smart deployment scheduling
 const Enemies = {
   list: [],
 
-  // Deployment queue system (3C)
-  deploymentQueue: [],  // {type, col, row, deployed: bool}
-  deployTimer: 0,
-  DEPLOY_INTERVAL: 8000,   // ms between deployments
+  // Smart deployment queue system
+  // "Frogs" = red, purple, blue, zombie, smart (hop-type enemies)
+  // "Non-frogs" = snake, ladybug (interleaved between frog deploys)
+  frogQueue: [],           // Queued frogs to deploy
+  nonFrogQueue: [],        // Queued non-frogs (snakes, ladybugs)
+  frogDeployTimer: 0,
+  nonFrogDeployTimer: 0,
+  FROG_DEPLOY_INTERVAL: 5000,    // 5s between frog deploy intervals
+  NON_FROG_DEPLOY_INTERVAL: 5000, // Same interval but offset by half
+  frogBatchSize: 1,        // How many frogs per interval (base)
+  frogBatchExtra: 0,       // Remainder frogs distributed to early intervals
+  frogBatchCount: 0,       // How many frog intervals have fired
+  deploying: false,        // Whether deployment is active
+
   RESPAWN_DELAY: 18000,    // ms before killed enemy can respawn
   respawnQueue: [],         // {type, timer}
 
   init() {
     this.list = [];
-    this.deploymentQueue = [];
-    this.deployTimer = 0;
+    this.frogQueue = [];
+    this.nonFrogQueue = [];
+    this.frogDeployTimer = 0;
+    this.nonFrogDeployTimer = 0;
+    this.frogBatchSize = 1;
+    this.frogBatchExtra = 0;
+    this.frogBatchCount = 0;
+    this.deploying = false;
     this.respawnQueue = [];
   },
 
@@ -32,7 +48,7 @@ const Enemies = {
                         type === 'snail' ? 1500 :
                         type === 'snake' ? 600 :
                         type === 'ladybug' ? 1200 :
-                        type === 'smart' ? 700 : 700;
+                        type === 'smart' ? 500 : 700;
     this.list.push({
       type,
       col,
@@ -67,29 +83,97 @@ const Enemies = {
     if (Audio.sfxEnemyDeploy) Audio.sfxEnemyDeploy();
   },
 
-  // Queue an enemy for later deployment (3C deployment system)
+  // Queue an enemy for later deployment — sorts into frog vs non-frog queue
   queueEnemy(type, col, row) {
-    this.deploymentQueue.push({ type, col, row });
+    const NON_FROG_TYPES = ['snake', 'ladybug'];
+    if (NON_FROG_TYPES.includes(type)) {
+      this.nonFrogQueue.push({ type, col, row });
+    } else {
+      this.frogQueue.push({ type, col, row });
+    }
   },
 
-  // Deploy the next enemy from the queue
-  _deployNext() {
-    if (this.deploymentQueue.length === 0) return;
-    const entry = this.deploymentQueue.shift();
+  // Calculate deployment batch sizes after all enemies are queued
+  // Called by startDeployment() after wave setup finishes queuing
+  _calculateDeploySchedule() {
+    const SNAIL_TIMER = 35000; // First snail spawns at 35s
+    const N = Math.floor(SNAIL_TIMER / this.FROG_DEPLOY_INTERVAL); // = 7 max frogs before snails
+    const numFrogs = this.frogQueue.length;
+
+    if (numFrogs <= N) {
+      // Simple case: 1 frog per interval
+      this.frogBatchSize = 1;
+      this.frogBatchExtra = 0;
+    } else {
+      // More frogs than intervals before snails — batch them
+      const extras = numFrogs - N;
+      this.frogBatchSize = 1 + Math.floor(extras / N);
+      this.frogBatchExtra = extras % N;
+    }
+    this.frogBatchCount = 0;
+  },
+
+  // Start the deployment process — called after all enemies are queued for a wave
+  startDeployment() {
+    this._calculateDeploySchedule();
+    this.deploying = true;
+    // First frog deploys after 2 seconds
+    this.frogDeployTimer = 2000;
+    // Non-frogs start offset by half the frog interval (deploy between frogs)
+    this.nonFrogDeployTimer = 2000 + Math.floor(this.FROG_DEPLOY_INTERVAL / 2);
+  },
+
+  // Deploy a batch of frogs from the frog queue
+  _deployFrogBatch() {
+    if (this.frogQueue.length === 0) return;
+    // How many to deploy this interval
+    let count = this.frogBatchSize;
+    // Early intervals get +1 extra to distribute remainder
+    if (this.frogBatchCount < this.frogBatchExtra) {
+      count++;
+    }
+    this.frogBatchCount++;
+    // Deploy up to 'count' frogs
+    for (let i = 0; i < count && this.frogQueue.length > 0; i++) {
+      const entry = this.frogQueue.shift();
+      this.spawn(entry.type, entry.col, entry.row);
+    }
+  },
+
+  // Deploy next non-frog from the non-frog queue
+  _deployNonFrog() {
+    if (this.nonFrogQueue.length === 0) return;
+    const entry = this.nonFrogQueue.shift();
     this.spawn(entry.type, entry.col, entry.row);
   },
 
   update(dt) {
-    // Tick deployment timer (3C)
-    if (this.deploymentQueue.length > 0) {
-      this.deployTimer -= dt;
-      if (this.deployTimer <= 0) {
-        this._deployNext();
-        this.deployTimer = this.DEPLOY_INTERVAL;
+    // Smart deployment: tick frog and non-frog timers separately
+    if (this.deploying) {
+      const hasWork = this.frogQueue.length > 0 || this.nonFrogQueue.length > 0;
+      if (!hasWork) {
+        this.deploying = false;
+      } else {
+        // Frog deployment timer
+        if (this.frogQueue.length > 0) {
+          this.frogDeployTimer -= dt;
+          if (this.frogDeployTimer <= 0) {
+            this._deployFrogBatch();
+            this.frogDeployTimer = this.FROG_DEPLOY_INTERVAL;
+          }
+        }
+        // Non-frog deployment timer (offset between frog intervals)
+        if (this.nonFrogQueue.length > 0) {
+          this.nonFrogDeployTimer -= dt;
+          if (this.nonFrogDeployTimer <= 0) {
+            this._deployNonFrog();
+            this.nonFrogDeployTimer = this.NON_FROG_DEPLOY_INTERVAL;
+          }
+        }
       }
     }
 
-    // Tick respawn timers (3C)
+    // Tick respawn timers
     for (let i = this.respawnQueue.length - 1; i >= 0; i--) {
       this.respawnQueue[i].timer -= dt;
       if (this.respawnQueue[i].timer <= 0) {
@@ -102,6 +186,12 @@ const Enemies = {
         else if (edge === 2) { col = Math.floor(Math.random() * GRID_COLS); row = GRID_ROWS - 1; }
         else { col = 0; row = Math.floor(Math.random() * GRID_ROWS); }
         this.queueEnemy(entry.type, col, row);
+        // Recalculate and restart deployment if not already deploying
+        if (!this.deploying) {
+          this.startDeployment();
+        } else {
+          this._calculateDeploySchedule();
+        }
       }
     }
 
@@ -133,6 +223,14 @@ const Enemies = {
             // Ladybug resets tile to TILE_NEUTRAL
             Grid.set(enemy.col, enemy.row, TILE_NEUTRAL);
           } else if (enemy.tileState !== null) {
+            // Check if enemy landed in a fully green-enclosed area (e.g. blue teleport)
+            // If surrounded by green on all paths to edge, the enemy is captured
+            if (this._isEnclosedByGreen(enemy.col, enemy.row)) {
+              enemy.alive = false;
+              Player.addScore(this.getKillScore(enemy.type));
+              Audio.sfxCapture();
+              continue;
+            }
             // -1 point when enemy reclaims a green tile
             if (Grid.get(enemy.col, enemy.row) === TILE_GREEN) {
               Player.addScore(-1);
@@ -243,17 +341,19 @@ const Enemies = {
     }
   },
 
-  // Smart frog AI: tries to move to cut off and surround the player (4B)
+  // Smart frog AI: orbits the player clockwise at ~3 tile radius to encircle them
   _smartDirection(enemy) {
-    // 15% random for unpredictability
-    if (Math.random() < 0.15) return Math.floor(Math.random() * 4);
+    // 10% random for unpredictability
+    if (Math.random() < 0.10) return Math.floor(Math.random() * 4);
 
     const dx = Player.col - enemy.col;
     const dy = Player.row - enemy.row;
     const dist = Math.abs(dx) + Math.abs(dy);
+    const ORBIT_RADIUS = 3; // Stay ~3 tiles from player
 
-    // If far from player, chase like purple
+    // Phase 1: If far away (>6 tiles), approach the player
     if (dist > 6) {
+      // Move toward player but at an angle (try to get to orbit distance)
       if (Math.abs(dx) > Math.abs(dy)) {
         return dx > 0 ? DIR_RIGHT : DIR_LEFT;
       } else {
@@ -261,38 +361,42 @@ const Enemies = {
       }
     }
 
-    // When close, try to get ahead of the player
-    // Anticipate player movement: target a position offset from the player
-    // Pick a target 3 tiles ahead of where the player might go
-    let targetCol = Player.col;
-    let targetRow = Player.row;
+    // Phase 2: At orbit distance, circle clockwise around the player
+    // Determine which quadrant we're in relative to the player
+    // and move clockwise along the perimeter
 
-    // Simple prediction: move to flank the player
-    // Try to get to the opposite side of where the smart frog currently is
-    if (Math.abs(dx) < Math.abs(dy)) {
-      // Frog is more vertical — try to close horizontal gap
-      targetCol = Player.col + (dx > 0 ? -3 : 3);
-      targetRow = Player.row;
-    } else {
-      // Frog is more horizontal — try to close vertical gap
-      targetCol = Player.col;
-      targetRow = Player.row + (dy > 0 ? -3 : 3);
+    // But also try to maintain orbit distance
+    const tooClose = dist < ORBIT_RADIUS;
+    const tooFar = dist > ORBIT_RADIUS + 2;
+
+    if (tooClose) {
+      // Back away from player
+      if (Math.abs(dx) > Math.abs(dy)) {
+        return dx > 0 ? DIR_LEFT : DIR_RIGHT; // Move away on major axis
+      } else {
+        return dy > 0 ? DIR_UP : DIR_DOWN;
+      }
     }
 
-    // Move toward the target
-    const tdx = targetCol - enemy.col;
-    const tdy = targetRow - enemy.row;
-
-    if (Math.abs(tdx) > Math.abs(tdy)) {
-      return tdx > 0 ? DIR_RIGHT : DIR_LEFT;
-    } else if (tdy !== 0) {
-      return tdy > 0 ? DIR_DOWN : DIR_UP;
-    } else {
-      // Already at target, chase directly
-      if (dx !== 0) return dx > 0 ? DIR_RIGHT : DIR_LEFT;
-      if (dy !== 0) return dy > 0 ? DIR_DOWN : DIR_UP;
-      return Math.floor(Math.random() * 4);
+    if (tooFar) {
+      // Close in on player
+      if (Math.abs(dx) > Math.abs(dy)) {
+        return dx > 0 ? DIR_RIGHT : DIR_LEFT;
+      } else {
+        return dy > 0 ? DIR_DOWN : DIR_UP;
+      }
     }
+
+    // At good distance: orbit clockwise
+    // Clockwise: N->E->S->W->N
+    if (dy < -1) return DIR_RIGHT;  // North of player -> go east
+    if (dx > 1) return DIR_DOWN;    // East of player -> go south
+    if (dy > 1) return DIR_LEFT;    // South of player -> go west
+    if (dx < -1) return DIR_UP;     // West of player -> go north
+
+    // Edge case: very close to same row/col as player
+    // Continue current orbit direction
+    return Math.floor(Math.random() * 4);
   },
 
   draw() {
@@ -374,13 +478,32 @@ const Enemies = {
     Audio.sfxCapture();
   },
 
-  // Mark an enemy as killed and start respawn timer (3C)
+  // Mark an enemy as killed and start respawn timer
   markKilledForRespawn(type) {
     // Only respawn frog types and snake (not snails or ladybugs)
     const respawnTypes = ['red', 'purple', 'blue', 'smart', 'snake'];
     if (respawnTypes.includes(type)) {
       this.respawnQueue.push({ type, timer: this.RESPAWN_DELAY });
     }
+  },
+
+  // Check if a position is fully enclosed by green tiles (can't reach edge without crossing green)
+  _isEnclosedByGreen(col, row) {
+    const visited = [];
+    for (let r = 0; r < GRID_ROWS; r++) {
+      visited[r] = [];
+      for (let c = 0; c < GRID_COLS; c++) visited[r][c] = false;
+    }
+    const stack = [{ c: col, r: row }];
+    while (stack.length > 0) {
+      const { c, r } = stack.pop();
+      if (c < 0 || c >= GRID_COLS || r < 0 || r >= GRID_ROWS) return false; // Reached edge
+      if (visited[r][c]) continue;
+      if (Grid.get(c, r) === TILE_GREEN) continue; // Green blocks path
+      visited[r][c] = true;
+      stack.push({ c: c+1, r }, { c: c-1, r }, { c, r: r+1 }, { c, r: r-1 });
+    }
+    return true; // Never reached edge — enclosed
   },
 
   // Remove dead enemies from list

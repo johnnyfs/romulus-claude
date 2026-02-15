@@ -57,6 +57,29 @@ const Player = {
           this.die();
           return;
         }
+        // Zombie mechanic evolution: enemy tiles need extra hops to clear
+        if (Waves.zombieLevel >= 1) {
+          const isEnemyTile = [TILE_RED, TILE_PURPLE, TILE_BLUE, TILE_SMART].includes(landedTile);
+          if (isEnemyTile) {
+            if (Waves.zombieLevel >= 2) {
+              // Level 2: enemy → halfclear first (3 total hops needed)
+              Grid.set(this.col, this.row, TILE_HALFCLEAR);
+            } else {
+              // Level 1: enemy → neutral (2 total hops needed)
+              Grid.set(this.col, this.row, TILE_NEUTRAL);
+            }
+            Audio.sfxClaim(true);
+            Encircle.checkAll();
+            return;
+          }
+          // Halfclear tiles → neutral (intermediate step for zombie level 2)
+          if (landedTile === TILE_HALFCLEAR) {
+            Grid.set(this.col, this.row, TILE_NEUTRAL);
+            Audio.sfxClaim(false);
+            Encircle.checkAll();
+            return;
+          }
+        }
         // Zombie tiles: first hop reverts to neutral, second hop claims green
         if (landedTile === TILE_ZOMBIE) {
           Grid.set(this.col, this.row, TILE_NEUTRAL);
