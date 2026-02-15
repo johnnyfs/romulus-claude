@@ -1,5 +1,6 @@
 // Encirclement detection - Qix/Amidar style flood-fill
-// Sequential animation pipeline: fill → kills (one at a time) → bonus → clear
+// Sequential animation pipeline: fill -> kills (one at a time) -> bonus -> clear
+// Also handles enemy (bad frog) encirclement detection (4A)
 const Encircle = {
   flashTiles: [],
   bonusPopups: [],
@@ -59,11 +60,13 @@ const Encircle = {
     }
     this.lastFillTime = now;
 
-    // Find enemies in region (excluding zombies)
+    // Find enemies in region (excluding zombies, snails, ladybugs)
     const enemies = [];
     for (const enemy of Enemies.list) {
       if (!enemy.alive) continue;
-      if (enemy.type === 'zombie') continue;
+      if (enemy.type === 'zombie') continue;   // Zombies survive encirclement
+      if (enemy.type === 'snail') continue;     // Snails excluded
+      if (enemy.type === 'ladybug') continue;   // Ladybugs excluded
       for (const tile of region) {
         if (enemy.col === tile.col && enemy.row === tile.row) {
           enemies.push(enemy);
@@ -112,7 +115,7 @@ const Encircle = {
             p.index++;
           }
           if (p.index >= p.queue.length) {
-            // Fill done — move to kills or bonus
+            // Fill done - move to kills or bonus
             if (p.enemies.length > 0) {
               p.stage = 'killing';
               p.killIndex = 0;
@@ -120,6 +123,8 @@ const Encircle = {
               // Start first kill
               const enemy = p.enemies[0];
               enemy.alive = false;
+              // Mark for respawn (3C)
+              Enemies.markKilledForRespawn(enemy.type);
               Audio.sfxCapture();
             } else {
               p.stage = 'bonus';
@@ -132,9 +137,9 @@ const Encircle = {
         case 'killing':
           p.killTimer -= dt;
           if (p.killTimer <= 0) {
-            // Show score for this kill — each subsequent kill worth more
+            // Show score for this kill - each subsequent kill worth more
             const enemy = p.enemies[p.killIndex];
-            const baseScore = enemy.type === 'red' ? 200 : enemy.type === 'purple' ? 500 : enemy.type === 'blue' ? 800 : 100;
+            const baseScore = Enemies.getKillScore(enemy.type);
             const multiplier = p.killIndex + 1; // 1st=1x, 2nd=2x, 3rd=3x
             const killScore = baseScore * multiplier;
             Player.addScore(killScore);
@@ -151,7 +156,7 @@ const Encircle = {
               p.killTimer = 700;
               p.stage = 'kill_wait';
             } else {
-              // All kills done — show fill bonus
+              // All kills done - show fill bonus
               p.stage = 'bonus_wait';
               p.bonusTimer = 500; // Brief pause before fill bonus
             }
@@ -164,6 +169,8 @@ const Encircle = {
           if (this.bonusPopups.length === 0 || p.bonusTimer <= -200) {
             const enemy = p.enemies[p.killIndex];
             enemy.alive = false;
+            // Mark for respawn (3C)
+            Enemies.markKilledForRespawn(enemy.type);
             Audio.sfxCapture();
             p.killTimer = 600;
             p.stage = 'killing';
@@ -226,6 +233,76 @@ const Encircle = {
       popup.alpha = Math.min(1, popup.timer / 800);
       if (popup.timer <= 0) this.bonusPopups.splice(i, 1);
     }
+  },
+
+  // Check for enemy encirclements (4A - bad frog fill)
+  // Called from main.js after Enemies.update()
+  // If enemy tiles form an enclosure, fill it and kill the player if inside
+  checkEnemyEncirclement() {
+    if (this.pipeline) return false; // Don't check during animation
+
+    // Enemy tile colors that can encircle
+    const enemyTileTypes = [TILE_RED, TILE_PURPLE, TILE_BLUE, TILE_SMART];
+
+    for (const enemyTile of enemyTileTypes) {
+      // Check if there are enough tiles of this color to form an enclosure
+      if (Grid.count(enemyTile) < 4) continue;
+
+      const visited = [];
+      for (let r = 0; r < GRID_ROWS; r++) {
+        visited[r] = [];
+        for (let c = 0; c < GRID_COLS; c++) {
+          visited[r][c] = false;
+        }
+      }
+
+      for (let r = 0; r < GRID_ROWS; r++) {
+        for (let c = 0; c < GRID_COLS; c++) {
+          if (visited[r][c]) continue;
+          if (Grid.get(c, r) === enemyTile) { visited[r][c] = true; continue; }
+
+          // Flood fill from this non-enemy tile
+          const region = [];
+          let touchesEdge = false;
+          let playerInRegion = false;
+          const stack = [{ col: c, row: r }];
+
+          while (stack.length > 0) {
+            const { col: cx, row: ry } = stack.pop();
+            if (cx < 0 || cx >= GRID_COLS || ry < 0 || ry >= GRID_ROWS) { touchesEdge = true; continue; }
+            if (visited[ry][cx]) continue;
+            if (Grid.get(cx, ry) === enemyTile) continue; // Boundary
+            visited[ry][cx] = true;
+            region.push({ col: cx, row: ry });
+            if (cx === 0 || cx === GRID_COLS - 1 || ry === 0 || ry === GRID_ROWS - 1) touchesEdge = true;
+            if (cx === Player.col && ry === Player.row) playerInRegion = true;
+            stack.push(
+              { col: cx + 1, row: ry },
+              { col: cx - 1, row: ry },
+              { col: cx, row: ry + 1 },
+              { col: cx, row: ry - 1 }
+            );
+          }
+
+          if (!touchesEdge && region.length > 0) {
+            // Enemy encirclement detected! Fill region with enemy color
+            for (const tile of region) {
+              Grid.set(tile.col, tile.row, enemyTile);
+            }
+
+            if (Audio.sfxEnemyEncircle) Audio.sfxEnemyEncircle();
+
+            // If player is inside the enclosed region, kill them
+            if (playerInRegion && !Player.invincible) {
+              Player.die();
+              return true;
+            }
+            return true; // Signal that something happened (one at a time)
+          }
+        }
+      }
+    }
+    return false;
   },
 
   _showFillBonus(p) {

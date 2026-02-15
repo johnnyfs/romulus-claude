@@ -60,7 +60,10 @@ const Game = {
         // Continuously check encirclement (not just on player hop)
         Encircle.checkAll();
 
-        // Check if player died (spike, enemy, etc)
+        // Check for enemy (bad frog) encirclement (4A)
+        Encircle.checkEnemyEncirclement();
+
+        // Check if player died (spike, enemy, enemy encirclement, etc)
         if (Player.justDied) {
           Player.justDied = false;
           this.state = STATE_DYING;

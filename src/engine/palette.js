@@ -51,6 +51,20 @@ const PALETTE = {
   REED_GREEN:  '#1a3d2e',
   REED_BROWN:  '#3a2810',
 
+  // Smart Frog
+  SMART:       '#e0e0e0',
+  SMART_DARK:  '#4a4a5a',
+  SMART_MID:   '#8a8a9a',
+
+  // Snake
+  SNAKE_GREEN:      '#2d8c30',
+  SNAKE_GREEN_DARK: '#1a5020',
+  SNAKE_YELLOW:     '#c8c820',
+
+  // Ladybug (red-tinted snail)
+  LADYBUG_RED:      '#ef4444',
+  LADYBUG_RED_DARK: '#5c1a1a',
+
   // Character accents
   SKIN:        '#f5c87a',
   SCARF:       '#ef4444',
@@ -69,6 +83,7 @@ const TILE_COLORS = {
   [TILE_SPIKE]:   PALETTE.SPIKE_DARK,
   [TILE_WATER]:   PALETTE.WATER_DARK,
   [TILE_ZOMBIE]:  '#3a3a4a',
+  [TILE_SMART]:   PALETTE.SMART_DARK,
 };
 
 // Brighter versions for claimed-tile borders/accents
@@ -77,4 +92,5 @@ const TILE_ACCENT_COLORS = {
   [TILE_RED]:     PALETTE.RED_MID,
   [TILE_PURPLE]:  PALETTE.PURPLE_MID,
   [TILE_BLUE]:    PALETTE.BLUE_MID,
+  [TILE_SMART]:   PALETTE.SMART_MID,
 };
