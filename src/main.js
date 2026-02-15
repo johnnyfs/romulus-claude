@@ -4,6 +4,7 @@ const Game = {
   lastTime: 0,
   waveClearTimer: 0,
   deathTimer: 0,
+  highScore: 0,
 
   init() {
     Renderer.init();
@@ -18,6 +19,7 @@ const Game = {
     Player.score = 0;
     Waves.init();
     this.state = STATE_PLAYING;
+    Audio.startMusic();
   },
 
   update(dt) {
@@ -37,9 +39,10 @@ const Game = {
 
         Player.update(dt);
         Enemies.update(dt);
+        Encircle.update(dt);
 
-        // Collision check
-        if (Enemies.checkCollisionWithPlayer() && !Player.isHopping) {
+        // Collision check (skip if invincible)
+        if (Enemies.checkCollisionWithPlayer() && !Player.isHopping && !Player.invincible) {
           Player.die();
           this.state = STATE_DYING;
           this.deathTimer = 1500;
@@ -49,8 +52,8 @@ const Game = {
         // Score for claiming tiles
         // (handled in player landing)
 
-        // Win condition
-        if (Waves.checkWinCondition()) {
+        // Win condition (only check when not mid-hop)
+        if (!Player.isHopping && Waves.checkWinCondition()) {
           this.state = STATE_WAVE_CLEAR;
           this.waveClearTimer = 2000;
           Audio.sfxWaveClear();
@@ -72,6 +75,11 @@ const Game = {
         if (this.deathTimer <= 0) {
           if (Player.lives <= 0) {
             this.state = STATE_GAME_OVER;
+            Audio.stopMusic();
+            // Update high score
+            if (Player.score > this.highScore) {
+              this.highScore = Player.score;
+            }
           } else {
             // Respawn
             Player.reset();
@@ -109,6 +117,7 @@ const Game = {
         Grid.draw();
         Enemies.draw();
         Player.draw();
+        Encircle.draw(); // Draw flash effects on top
         HUD.draw();
         if (this.state === STATE_PAUSED) {
           Renderer.drawText('PAUSED', 100, 128, PALETTE.WHITE, 8);
@@ -126,16 +135,18 @@ const Game = {
         Grid.draw();
         Enemies.draw();
         HUD.draw();
-        // Flash effect
-        if (Math.floor(this.deathTimer / 100) % 2) {
-          Player.draw();
-        }
+        // Show death sprite instead of flashing
+        const deathPos = Player.getPixelPos();
+        Renderer.drawSprite(Sprites.maripoga_death, deathPos.x, deathPos.y);
         break;
 
       case STATE_GAME_OVER:
         Renderer.drawText('GAME OVER', 88, 110, PALETTE.RED, 8);
         Renderer.drawText('SCORE: ' + Player.score, 88, 130, PALETTE.WHITE, 8);
-        Renderer.drawText('PRESS ENTER', 80, 160, PALETTE.HUD_TEXT, 8);
+        if (this.highScore > 0) {
+          Renderer.drawText('HIGH: ' + this.highScore, 88, 145, PALETTE.GREEN, 8);
+        }
+        Renderer.drawText('PRESS ENTER', 80, 170, PALETTE.HUD_TEXT, 8);
         break;
     }
   },

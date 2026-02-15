@@ -40,9 +40,10 @@ const Grid = {
     return n;
   },
 
-  // Get fill percentage for a state
+  // Get fill percentage for a state (excludes hazard tiles from total)
   fillPercent(state) {
-    const total = GRID_COLS * GRID_ROWS;
+    const hazardCount = this.count(TILE_SPIKE) + this.count(TILE_WATER);
+    const total = GRID_COLS * GRID_ROWS - hazardCount;
     return this.count(state) / total;
   },
 

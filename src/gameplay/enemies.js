@@ -61,6 +61,7 @@ const Enemies = {
             enemy.row = newRow;
             enemy.isHopping = true;
             enemy.hopTimer = HOP_DURATION;
+            Audio.sfxEnemyHop();
             continue;
           }
         }
@@ -88,6 +89,7 @@ const Enemies = {
           enemy.row = newRow;
           enemy.isHopping = true;
           enemy.hopTimer = HOP_DURATION;
+          Audio.sfxEnemyHop();
         }
       }
     }
