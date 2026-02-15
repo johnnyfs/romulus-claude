@@ -16,6 +16,8 @@ const TILE_PURPLE = 3;  // Purple frog
 const TILE_BLUE = 4;    // Blue frog
 const TILE_SPIKE = 5;   // Hazard
 const TILE_WATER = 6;   // Hazard
+const TILE_SNAIL = 7;   // Snail entity
+const TILE_ZOMBIE = 8;  // Zombie frog (though they use TILE_NEUTRAL for their tiles)
 
 // Directions
 const DIR_NONE = -1;
@@ -34,6 +36,11 @@ const STATE_WAVE_CLEAR = 2;
 const STATE_DYING = 3;
 const STATE_GAME_OVER = 4;
 const STATE_PAUSED = 5;
+
+// Wave clear sub-states
+const CLEAR_SHOW_MESSAGE = 0;
+const CLEAR_BONUS_FILL = 1;
+const CLEAR_SHOW_WAVE = 2;
 
 // Timing
 const HOP_DURATION = 200; // ms for hop animation

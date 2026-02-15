@@ -129,11 +129,153 @@ const Audio = {
     this.playNote(220, 0.03, 0.035, 'square', 0.06, 0.005, 0.02);
   },
 
+  // Progressive fill sounds - reward increases with fill size
+  sfxFillSmall() {
+    // 1-5 tiles: Quick 2-note chirp, slightly higher than claim
+    this.playNote(494, 0, 0.06, 'square', 0.14, 0.005, 0.025);
+    this.playNote(587, 0.04, 0.06, 'square', 0.13, 0.005, 0.025);
+  },
+
+  sfxFillMedium() {
+    // 6-15 tiles: 3-note ascending arpeggio, bright and satisfying
+    this.playNote(523, 0, 0.08, 'square', 0.16, 0.005, 0.03);
+    this.playNote(659, 0.06, 0.08, 'square', 0.15, 0.005, 0.03);
+    this.playNote(784, 0.12, 0.1, 'square', 0.14, 0.005, 0.04);
+    // Add triangle harmony on last note
+    this.playNote(1568, 0.12, 0.1, 'triangle', 0.08, 0.01, 0.04);
+  },
+
+  sfxFillLarge() {
+    // 16-30 tiles: 4-note fanfare with harmony, mini victory
+    const notes = [523, 659, 784, 880]; // C5, E5, G5, A5
+    const duration = 0.1;
+    notes.forEach((freq, i) => {
+      this.playNote(freq, i * duration * 0.7, duration, 'square', 0.17, 0.005, 0.04);
+      // Add harmony on last two notes
+      if (i >= 2) {
+        this.playNote(freq * 1.5, i * duration * 0.7, duration, 'triangle', 0.1, 0.01, 0.04);
+      }
+    });
+    // Bass note for impact
+    this.playNote(131, 0.21, 0.15, 'triangle', 0.15, 0.01, 0.06);
+  },
+
+  sfxFillHuge() {
+    // 31+ tiles: 6-note triumphant cascade with bass, very rewarding
+    const notes = [523, 659, 784, 880, 988, 1047]; // C5 to C6
+    const duration = 0.1;
+    notes.forEach((freq, i) => {
+      this.playNote(freq, i * duration * 0.65, duration, 'square', 0.18, 0.005, 0.04);
+      // Add rich harmony
+      if (i >= 3) {
+        this.playNote(freq * 1.5, i * duration * 0.65, duration, 'triangle', 0.11, 0.01, 0.04);
+      }
+    });
+    // Deep bass note for power
+    this.playNote(65.4, 0, 0.4, 'triangle', 0.2, 0.02, 0.15);
+    this.playNote(131, 0.2, 0.3, 'triangle', 0.18, 0.01, 0.12);
+  },
+
+  // Hurry up warning - urgent countdown feel
+  sfxHurryUp() {
+    // Rapid descending notes, repeated 3 times with increasing urgency
+    const pattern = [880, 784, 698]; // A5, G5, F5
+    for (let rep = 0; rep < 3; rep++) {
+      const offset = rep * 0.4;
+      const volume = 0.15 + rep * 0.03; // Get louder each time
+      pattern.forEach((freq, i) => {
+        this.playNote(freq, offset + i * 0.08, 0.08, 'square', volume, 0.005, 0.03);
+      });
+    }
+    // Final urgent accent
+    this.playNote(659, 1.2, 0.15, 'square', 0.22, 0.005, 0.06);
+    this.playNote(330, 1.2, 0.15, 'triangle', 0.18, 0.01, 0.06);
+  },
+
+  // Snail creeping sound - ominous and unsettling
+  sfxSnailMove() {
+    // Deep triangle wave with slow pitch bend downward
+    if (!this.enabled) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+
+    // Start at 110 Hz, bend down to 80 Hz
+    osc.frequency.setValueAtTime(110, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.2);
+
+    // Ominous envelope
+    gain.gain.value = 0;
+    gain.gain.linearRampToValueAtTime(0.15, this.ctx.currentTime + 0.02);
+    gain.gain.linearRampToValueAtTime(0.12, this.ctx.currentTime + 0.15);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(this.ctx.currentTime);
+    osc.stop(this.ctx.currentTime + 0.2);
+  },
+
+  // Perfect 100% bonus - grand celebration
+  sfxPerfect() {
+    // 8+ notes with major chord arpeggios, most rewarding sound
+    const melody = [
+      523, 659, 784, 880, 1047, 880, 784, 1047, 1319 // C major arpeggio cascade
+    ];
+    const duration = 0.12;
+
+    melody.forEach((freq, i) => {
+      this.playNote(freq, i * duration * 0.7, duration, 'square', 0.18, 0.005, 0.05);
+      // Rich harmonic accompaniment
+      if (i >= 2) {
+        this.playNote(freq * 1.5, i * duration * 0.7 + 0.02, duration, 'triangle', 0.12, 0.01, 0.05);
+      }
+    });
+
+    // Bass chord progression
+    this.playNote(65.4, 0, 0.8, 'triangle', 0.18, 0.02, 0.2);
+    this.playNote(131, 0.4, 0.6, 'triangle', 0.16, 0.01, 0.15);
+    this.playNote(196, 0.8, 0.5, 'triangle', 0.14, 0.01, 0.15);
+
+    // Final triumphant high note
+    this.playNote(1047, 0.9, 0.3, 'square', 0.2, 0.01, 0.1);
+    this.playNote(1568, 0.9, 0.3, 'triangle', 0.15, 0.01, 0.1);
+  },
+
+  // Combo stacking sound - pitch increases with multiplier
+  sfxCombo(multiplier) {
+    const baseFreq = 440; // A4
+    // x2 = 1.2x pitch, x3 = 1.4x, x4+ = 1.6x
+    const pitchMult = 1.0 + Math.min(multiplier - 1, 3) * 0.2;
+    const freq = baseFreq * pitchMult;
+
+    if (multiplier === 2) {
+      // Medium pitch, quick 2-note
+      this.playNote(freq, 0, 0.07, 'square', 0.15, 0.005, 0.03);
+      this.playNote(freq * 1.5, 0.05, 0.07, 'square', 0.14, 0.005, 0.03);
+    } else if (multiplier === 3) {
+      // High pitch, 3-note sparkle
+      this.playNote(freq, 0, 0.06, 'square', 0.16, 0.005, 0.025);
+      this.playNote(freq * 1.25, 0.04, 0.06, 'square', 0.15, 0.005, 0.025);
+      this.playNote(freq * 1.5, 0.08, 0.08, 'square', 0.14, 0.005, 0.03);
+      this.playNote(freq * 3, 0.08, 0.08, 'triangle', 0.09, 0.01, 0.03);
+    } else {
+      // x4+: Very high with extra sparkle notes
+      this.playNote(freq, 0, 0.06, 'square', 0.17, 0.005, 0.025);
+      this.playNote(freq * 1.33, 0.04, 0.06, 'square', 0.16, 0.005, 0.025);
+      this.playNote(freq * 1.67, 0.08, 0.06, 'square', 0.15, 0.005, 0.025);
+      this.playNote(freq * 2, 0.12, 0.1, 'square', 0.14, 0.005, 0.04);
+      // Extra sparkle harmonics
+      this.playNote(freq * 3, 0.08, 0.1, 'triangle', 0.1, 0.01, 0.04);
+      this.playNote(freq * 4, 0.12, 0.1, 'triangle', 0.08, 0.01, 0.04);
+    }
+  },
+
   // Background music loop - upbeat arcade chiptune
   startMusic() {
     if (!this.enabled || this.musicNodes) return;
 
-    this.musicNodes = { playing: true };
+    this.musicNodes = { playing: true, loopCount: 0 };
 
     // 16-bar loop at 140 BPM
     const bpm = 140;
@@ -145,55 +287,103 @@ const Audio = {
       if (!this.musicNodes || !this.musicNodes.playing) return;
 
       const now = 0;
+      const variation = this.musicNodes.loopCount % 2; // Alternate between two variations
 
-      // Melody (square wave) - catchy arcade theme
-      const melody = [
-        // Bar 1-2
-        { note: 659, time: 0, dur: 0.15 }, // E5
-        { note: 659, time: 0.25, dur: 0.15 },
-        { note: 784, time: 0.5, dur: 0.15 }, // G5
-        { note: 659, time: 0.75, dur: 0.15 },
-        { note: 523, time: 1.0, dur: 0.3 }, // C5
-        { note: 587, time: 1.5, dur: 0.15 }, // D5
-        { note: 659, time: 1.75, dur: 0.15 },
-        // Bar 3-4
-        { note: 784, time: 2.0, dur: 0.15 },
-        { note: 784, time: 2.25, dur: 0.15 },
-        { note: 880, time: 2.5, dur: 0.15 }, // A5
-        { note: 784, time: 2.75, dur: 0.15 },
-        { note: 659, time: 3.0, dur: 0.3 },
-        { note: 523, time: 3.5, dur: 0.15 },
-        { note: 587, time: 3.75, dur: 0.15 },
-        // Bar 5-6 (variation)
-        { note: 659, time: 4.0, dur: 0.15 },
-        { note: 659, time: 4.25, dur: 0.15 },
-        { note: 784, time: 4.5, dur: 0.15 },
-        { note: 880, time: 4.75, dur: 0.15 },
-        { note: 988, time: 5.0, dur: 0.3 }, // B5
-        { note: 880, time: 5.5, dur: 0.15 },
-        { note: 784, time: 5.75, dur: 0.15 },
-        // Bar 7-8 (resolution)
-        { note: 659, time: 6.0, dur: 0.15 },
-        { note: 784, time: 6.25, dur: 0.15 },
-        { note: 659, time: 6.5, dur: 0.15 },
-        { note: 587, time: 6.75, dur: 0.15 },
-        { note: 523, time: 7.0, dur: 0.5 }, // Long C5 ending
-      ];
+      // Melody (square wave) - catchy arcade theme with variation
+      let melody;
+      if (variation === 0) {
+        // Original melody
+        melody = [
+          // Bar 1-2
+          { note: 659, time: 0, dur: 0.15 }, // E5
+          { note: 659, time: 0.25, dur: 0.15 },
+          { note: 784, time: 0.5, dur: 0.15 }, // G5
+          { note: 659, time: 0.75, dur: 0.15 },
+          { note: 523, time: 1.0, dur: 0.3 }, // C5
+          { note: 587, time: 1.5, dur: 0.15 }, // D5
+          { note: 659, time: 1.75, dur: 0.15 },
+          // Bar 3-4
+          { note: 784, time: 2.0, dur: 0.15 },
+          { note: 784, time: 2.25, dur: 0.15 },
+          { note: 880, time: 2.5, dur: 0.15 }, // A5
+          { note: 784, time: 2.75, dur: 0.15 },
+          { note: 659, time: 3.0, dur: 0.3 },
+          { note: 523, time: 3.5, dur: 0.15 },
+          { note: 587, time: 3.75, dur: 0.15 },
+          // Bar 5-6 (variation)
+          { note: 659, time: 4.0, dur: 0.15 },
+          { note: 659, time: 4.25, dur: 0.15 },
+          { note: 784, time: 4.5, dur: 0.15 },
+          { note: 880, time: 4.75, dur: 0.15 },
+          { note: 988, time: 5.0, dur: 0.3 }, // B5
+          { note: 880, time: 5.5, dur: 0.15 },
+          { note: 784, time: 5.75, dur: 0.15 },
+          // Bar 7-8 (resolution)
+          { note: 659, time: 6.0, dur: 0.15 },
+          { note: 784, time: 6.25, dur: 0.15 },
+          { note: 659, time: 6.5, dur: 0.15 },
+          { note: 587, time: 6.75, dur: 0.15 },
+          { note: 523, time: 7.0, dur: 0.5 }, // Long C5 ending
+        ];
+      } else {
+        // Variation with slightly different melody
+        melody = [
+          // Bar 1-2
+          { note: 523, time: 0, dur: 0.15 }, // C5
+          { note: 659, time: 0.25, dur: 0.15 }, // E5
+          { note: 784, time: 0.5, dur: 0.15 }, // G5
+          { note: 880, time: 0.75, dur: 0.15 }, // A5
+          { note: 784, time: 1.0, dur: 0.3 }, // G5
+          { note: 659, time: 1.5, dur: 0.15 }, // E5
+          { note: 587, time: 1.75, dur: 0.15 }, // D5
+          // Bar 3-4
+          { note: 523, time: 2.0, dur: 0.15 },
+          { note: 587, time: 2.25, dur: 0.15 },
+          { note: 659, time: 2.5, dur: 0.15 },
+          { note: 784, time: 2.75, dur: 0.15 },
+          { note: 880, time: 3.0, dur: 0.3 },
+          { note: 784, time: 3.5, dur: 0.15 },
+          { note: 659, time: 3.75, dur: 0.15 },
+          // Bar 5-6
+          { note: 784, time: 4.0, dur: 0.15 },
+          { note: 880, time: 4.25, dur: 0.15 },
+          { note: 988, time: 4.5, dur: 0.15 }, // B5
+          { note: 1047, time: 4.75, dur: 0.15 }, // C6
+          { note: 988, time: 5.0, dur: 0.3 },
+          { note: 880, time: 5.5, dur: 0.15 },
+          { note: 784, time: 5.75, dur: 0.15 },
+          // Bar 7-8 (resolution)
+          { note: 659, time: 6.0, dur: 0.15 },
+          { note: 587, time: 6.25, dur: 0.15 },
+          { note: 523, time: 6.5, dur: 0.15 },
+          { note: 587, time: 6.75, dur: 0.15 },
+          { note: 523, time: 7.0, dur: 0.5 }, // Long C5 ending
+        ];
+      }
 
       melody.forEach(m => {
         this.playNote(m.note, now + m.time, m.dur, 'square', 0.08, 0.01, 0.05);
       });
 
-      // Bassline (triangle wave) - simple root progression
+      // Bassline (triangle wave) - enhanced with more frequent notes
       const bass = [
-        { note: 131, time: 0, dur: 0.4 }, // C3
-        { note: 131, time: 1.0, dur: 0.4 },
-        { note: 147, time: 2.0, dur: 0.4 }, // D3
-        { note: 147, time: 3.0, dur: 0.4 },
-        { note: 131, time: 4.0, dur: 0.4 },
-        { note: 175, time: 5.0, dur: 0.4 }, // F3
-        { note: 196, time: 6.0, dur: 0.4 }, // G3
-        { note: 131, time: 7.0, dur: 0.4 },
+        // Every beat now, not just every bar
+        { note: 131, time: 0, dur: 0.18 }, // C3
+        { note: 131, time: 0.5, dur: 0.18 },
+        { note: 131, time: 1.0, dur: 0.18 },
+        { note: 131, time: 1.5, dur: 0.18 },
+        { note: 147, time: 2.0, dur: 0.18 }, // D3
+        { note: 147, time: 2.5, dur: 0.18 },
+        { note: 147, time: 3.0, dur: 0.18 },
+        { note: 147, time: 3.5, dur: 0.18 },
+        { note: 131, time: 4.0, dur: 0.18 }, // C3
+        { note: 131, time: 4.5, dur: 0.18 },
+        { note: 175, time: 5.0, dur: 0.18 }, // F3
+        { note: 175, time: 5.5, dur: 0.18 },
+        { note: 196, time: 6.0, dur: 0.18 }, // G3
+        { note: 196, time: 6.5, dur: 0.18 },
+        { note: 131, time: 7.0, dur: 0.18 }, // C3
+        { note: 131, time: 7.5, dur: 0.18 },
       ];
 
       bass.forEach(b => {
@@ -206,7 +396,8 @@ const Audio = {
         this.playNoise(now + i * 0.25, 0.03, accent);
       }
 
-      // Schedule next loop
+      // Increment loop counter and schedule next loop
+      this.musicNodes.loopCount++;
       setTimeout(() => playLoop(), loopDuration * 1000);
     };
 
@@ -218,5 +409,23 @@ const Audio = {
       this.musicNodes.playing = false;
       this.musicNodes = null;
     }
+  },
+
+  // Placeholder for hurry up sound (to be implemented by Audio V5)
+  sfxHurryUp() {
+    // Basic hurry up warning sound
+    this.playNote(880, 0, 0.2, 'square', 0.2, 0.01, 0.05);
+    this.playNote(880, 0.25, 0.2, 'square', 0.2, 0.01, 0.05);
+    this.playNote(880, 0.5, 0.3, 'square', 0.25, 0.01, 0.1);
+  },
+
+  // Placeholder for perfect fill sound (to be implemented by Audio V5)
+  sfxPerfect() {
+    // Triumphant perfect sound
+    const melody = [523, 659, 784, 1047]; // C, E, G, high C
+    melody.forEach((freq, i) => {
+      this.playNote(freq, i * 0.1, 0.2, 'square', 0.2, 0.01, 0.08);
+      this.playNote(freq * 1.5, i * 0.1 + 0.05, 0.15, 'triangle', 0.15, 0.01, 0.06);
+    });
   },
 };

@@ -8,7 +8,15 @@ const Enemies = {
 
   // Spawn an enemy frog of given type at given position
   spawn(type, col, row) {
-    const tileState = type === 'red' ? TILE_RED : type === 'purple' ? TILE_PURPLE : TILE_BLUE;
+    const tileState = type === 'red' ? TILE_RED :
+                     type === 'purple' ? TILE_PURPLE :
+                     type === 'blue' ? TILE_BLUE :
+                     type === 'zombie' ? TILE_ZOMBIE :
+                     TILE_SNAIL;
+    const moveInterval = type === 'red' ? 800 :
+                        type === 'purple' ? 500 :
+                        type === 'zombie' ? 700 :
+                        type === 'snail' ? 1500 : 700;
     this.list.push({
       type,
       col,
@@ -18,13 +26,19 @@ const Enemies = {
       hopTimer: 0,
       hopFromCol: col,
       hopFromRow: row,
-      moveInterval: type === 'red' ? 800 : type === 'purple' ? 600 : 700,
+      moveInterval: moveInterval,
       moveCooldown: Math.random() * 500 + 300, // stagger initial moves
       teleportTimer: type === 'blue' ? 5000 : 0,
       alive: true,
+      doubleHopChance: type === 'purple' ? 0.3 : 0, // 30% chance purple hops twice
+      doubleHopQueued: false,
     });
-    // Claim starting tile
-    Grid.set(col, row, tileState);
+    // Claim starting tile (snails convert tiles to spike, zombies use gray)
+    if (type === 'snail') {
+      Grid.set(col, row, TILE_SPIKE);
+    } else {
+      Grid.set(col, row, tileState);
+    }
   },
 
   update(dt) {
@@ -36,7 +50,13 @@ const Enemies = {
         enemy.hopTimer -= dt;
         if (enemy.hopTimer <= 0) {
           enemy.isHopping = false;
-          Grid.set(enemy.col, enemy.row, enemy.tileState);
+          // Snails convert tiles to spike permanently on landing
+          if (enemy.type === 'snail') {
+            Grid.set(enemy.col, enemy.row, TILE_SPIKE);
+            if (Audio.sfxSnailMove) Audio.sfxSnailMove();
+          } else {
+            Grid.set(enemy.col, enemy.row, enemy.tileState);
+          }
         }
         continue;
       }
@@ -67,11 +87,21 @@ const Enemies = {
         }
       }
 
+      // Check for queued double hop
+      if (enemy.doubleHopQueued) {
+        enemy.doubleHopQueued = false;
+        // Immediately trigger another move
+        enemy.moveCooldown = 0;
+      }
+
       // Choose direction
       let dir;
       if (enemy.type === 'purple') {
         // Chase player
         dir = this._chaseDirection(enemy);
+      } else if (enemy.type === 'snail') {
+        // Snails move randomly
+        dir = Math.floor(Math.random() * 4);
       } else {
         // Random movement
         dir = Math.floor(Math.random() * 4);
@@ -82,14 +112,27 @@ const Enemies = {
 
       if (Grid.inBounds(newCol, newRow)) {
         const tile = Grid.get(newCol, newRow);
-        if (tile !== TILE_SPIKE && tile !== TILE_WATER) {
+        // Snails can move anywhere, others can't move onto spike/water
+        const canMove = enemy.type === 'snail' || (tile !== TILE_SPIKE && tile !== TILE_WATER);
+        if (canMove) {
           enemy.hopFromCol = enemy.col;
           enemy.hopFromRow = enemy.row;
           enemy.col = newCol;
           enemy.row = newRow;
           enemy.isHopping = true;
           enemy.hopTimer = HOP_DURATION;
+
+          // Snails convert tiles to spike permanently
+          if (enemy.type === 'snail') {
+            Grid.set(newCol, newRow, TILE_SPIKE);
+          }
+
           Audio.sfxEnemyHop();
+
+          // Purple frogs have a chance to hop twice
+          if (enemy.type === 'purple' && Math.random() < enemy.doubleHopChance && !enemy.doubleHopQueued) {
+            enemy.doubleHopQueued = true;
+          }
         }
       }
     }
@@ -99,7 +142,7 @@ const Enemies = {
     const dx = Player.col - enemy.col;
     const dy = Player.row - enemy.row;
     // Prefer the axis with greater distance, with some randomness
-    if (Math.random() < 0.2) return Math.floor(Math.random() * 4); // 20% random
+    if (Math.random() < 0.08) return Math.floor(Math.random() * 4); // 8% random (down from 20%)
     if (Math.abs(dx) > Math.abs(dy)) {
       return dx > 0 ? DIR_RIGHT : DIR_LEFT;
     } else {
