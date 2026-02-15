@@ -140,7 +140,7 @@ const Encircle = {
             Player.addScore(killScore);
 
             const x = enemy.col * TILE_SIZE + TILE_SIZE / 2;
-            const y = (enemy.row + 1) * TILE_SIZE;
+            const y = (enemy.row + GRID_OFFSET_Y) * TILE_SIZE;
             let text = '+' + killScore;
             if (multiplier > 1) text += ' x' + multiplier;
             this.bonusPopups.push({ text, x, y, timer: 900, alpha: 1.0 });
@@ -190,7 +190,7 @@ const Encircle = {
               let cx = 0, cy = 0;
               for (const t of p.queue) { cx += t.col; cy += t.row; }
               cx = Math.floor(cx / p.queue.length) * TILE_SIZE + 8;
-              cy = (Math.floor(cy / p.queue.length) + 1) * TILE_SIZE;
+              cy = (Math.floor(cy / p.queue.length) + GRID_OFFSET_Y) * TILE_SIZE;
               this.bonusPopups.push({ text: 'PERFECT!', x: cx, y: cy, timer: 1500, alpha: 1.0 });
               p.stage = 'perfect_wait';
               p.bonusTimer = 1500;
@@ -235,7 +235,7 @@ const Encircle = {
     let cx = 0, cy = 0;
     for (const t of p.queue) { cx += t.col; cy += t.row; }
     cx = Math.floor(cx / p.queue.length) * TILE_SIZE + 8;
-    cy = (Math.floor(cy / p.queue.length) + 1) * TILE_SIZE;
+    cy = (Math.floor(cy / p.queue.length) + GRID_OFFSET_Y) * TILE_SIZE;
 
     let text = '+' + fillBonus;
     if (this.fillComboMultiplier > 1) text += ' x' + this.fillComboMultiplier;
@@ -249,7 +249,7 @@ const Encircle = {
       const idx = Math.min(p.killIndex, p.enemies.length - 1);
       const enemy = p.enemies[idx];
       const x = enemy.col * TILE_SIZE;
-      const y = (enemy.row + 1) * TILE_SIZE;
+      const y = (enemy.row + GRID_OFFSET_Y) * TILE_SIZE;
 
       if (p.stage === 'killing') {
         // Spinning sprite
@@ -266,7 +266,7 @@ const Encircle = {
     // Flash tiles
     for (const flash of this.flashTiles) {
       const x = flash.col * TILE_SIZE;
-      const y = (flash.row + 1) * TILE_SIZE;
+      const y = (flash.row + GRID_OFFSET_Y) * TILE_SIZE;
       if (Math.floor(flash.timer / 50) % 2) {
         Renderer.fillRect(x, y, TILE_SIZE, TILE_SIZE, 'rgba(255, 255, 255, 0.4)');
       }

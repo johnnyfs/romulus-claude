@@ -161,11 +161,11 @@ const Enemies = {
 
   _getPixelPos(enemy) {
     const targetX = enemy.col * TILE_SIZE;
-    const targetY = (enemy.row + 1) * TILE_SIZE;
+    const targetY = (enemy.row + GRID_OFFSET_Y) * TILE_SIZE;
     if (enemy.isHopping) {
       const t = 1 - (enemy.hopTimer / HOP_DURATION);
       const fromX = enemy.hopFromCol * TILE_SIZE;
-      const fromY = (enemy.hopFromRow + 1) * TILE_SIZE;
+      const fromY = (enemy.hopFromRow + GRID_OFFSET_Y) * TILE_SIZE;
       const x = fromX + (targetX - fromX) * t;
       const baseY = fromY + (targetY - fromY) * t;
       const arc = -Math.sin(t * Math.PI) * 6;

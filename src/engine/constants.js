@@ -4,8 +4,9 @@ const SCREEN_WIDTH = 256;
 const SCREEN_HEIGHT = 240;
 const TILE_SIZE = 16;
 const GRID_COLS = 16;  // 256 / 16
-const GRID_ROWS = 14;  // 14 playable rows (row 0 = HUD)
+const GRID_ROWS = 12;  // 12 playable rows (top+bottom rows reserved for decoration)
 const HUD_HEIGHT = TILE_SIZE; // Top 16px for HUD
+const GRID_OFFSET_Y = 2; // Grid starts 2 tile-rows down (HUD + decoration row)
 const SCALE = 3; // CSS scale factor for the canvas
 
 // Tile states

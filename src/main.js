@@ -186,7 +186,7 @@ const Game = {
               for (let c = 0; c < GRID_COLS; c++) {
                 if (Grid.get(c, r) !== TILE_GREEN) {
                   const x = c * TILE_SIZE;
-                  const y = (r + 1) * TILE_SIZE;
+                  const y = (r + GRID_OFFSET_Y) * TILE_SIZE;
                   Renderer.fillRect(x, y, TILE_SIZE, TILE_SIZE, 'rgba(255, 255, 255, 0.6)');
                 }
               }
