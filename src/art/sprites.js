@@ -22,6 +22,52 @@ const Sprites = {
   // Blue frog hop
   blue_frog_hop: null,
 
+  // Add black outlines to a sprite
+  addOutline(sprite) {
+    const B = PALETTE.BLACK;
+    const _ = null;
+    const height = sprite.length;
+    const width = sprite[0].length;
+
+    // Create a copy of the sprite
+    const outlined = sprite.map(row => [...row]);
+
+    // For each pixel, if it's non-transparent, check neighbors
+    // If any neighbor is transparent, mark it for outline
+    const outlinePixels = [];
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const pixel = sprite[y][x];
+        if (pixel !== null) {
+          // Check 4-directional neighbors
+          const neighbors = [
+            [x, y-1], // up
+            [x+1, y], // right
+            [x, y+1], // down
+            [x-1, y], // left
+          ];
+          for (const [nx, ny] of neighbors) {
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+              if (sprite[ny][nx] === null) {
+                // This neighbor is transparent, add black outline there
+                outlinePixels.push([nx, ny]);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Apply outline pixels
+    for (const [x, y] of outlinePixels) {
+      if (outlined[y][x] === null) {
+        outlined[y][x] = B;
+      }
+    }
+
+    return outlined;
+  },
+
   init() {
     const G = PALETTE.GREEN;
     const Gd = PALETTE.GREEN_DARK;
@@ -176,6 +222,30 @@ const Sprites = {
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
     ];
 
+    // Snail sprite - small hazard
+    const Sn = PALETTE.SPIKE; // Orange-ish for snail shell
+    const Snd = PALETTE.SPIKE_DARK;
+    const SnB = PALETTE.NEUTRAL; // Snail body gray
+
+    this.snail = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,Sn,Sn,Sn,Sn,_,_,_,_,_,_,_],
+      [_,_,_,_,Sn,Snd,Sn,Snd,Sn,Sn,_,_,_,_,_,_],
+      [_,_,_,Sn,Snd,Sn,Snd,Sn,Snd,Sn,Sn,_,_,_,_,_],
+      [_,_,_,Sn,Sn,Sn,Sn,Sn,Sn,Snd,Sn,_,_,_,_,_],
+      [_,_,_,_,SnB,SnB,SnB,SnB,Sn,Sn,_,_,_,_,_,_],
+      [_,_,_,SnB,W,B,SnB,W,B,SnB,SnB,_,_,_,_,_],
+      [_,_,_,SnB,SnB,SnB,SnB,SnB,SnB,SnB,SnB,_,_,_,_,_],
+      [_,_,_,_,SnB,_,_,_,_,_,SnB,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
     // BLUE FROG - Rounder, teleporter look, mysterious eyes
     const Bl = PALETTE.BLUE;
     const Bd = PALETTE.BLUE_DARK;
@@ -217,6 +287,18 @@ const Sprites = {
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
     ];
+
+    // Apply outlines to all sprites
+    this.maripoga_idle = this.addOutline(this.maripoga_idle);
+    this.maripoga_hop = this.addOutline(this.maripoga_hop);
+    this.maripoga_death = this.addOutline(this.maripoga_death);
+    this.red_frog_idle = this.addOutline(this.red_frog_idle);
+    this.red_frog_hop = this.addOutline(this.red_frog_hop);
+    this.purple_frog_idle = this.addOutline(this.purple_frog_idle);
+    this.purple_frog_hop = this.addOutline(this.purple_frog_hop);
+    this.blue_frog_idle = this.addOutline(this.blue_frog_idle);
+    this.blue_frog_hop = this.addOutline(this.blue_frog_hop);
+    this.snail = this.addOutline(this.snail);
   },
 
   // Get the right sprite for an entity
@@ -225,6 +307,7 @@ const Sprites = {
     if (type === 'red') return isHopping ? this.red_frog_hop : this.red_frog_idle;
     if (type === 'purple') return isHopping ? this.purple_frog_hop : this.purple_frog_idle;
     if (type === 'blue') return isHopping ? this.blue_frog_hop : this.blue_frog_idle;
+    if (type === 'snail') return this.snail;
     return this.maripoga_idle;
   },
 };
