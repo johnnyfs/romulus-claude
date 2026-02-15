@@ -22,8 +22,8 @@
 </head>
 <body>
   <canvas id="game"></canvas>
-  <!-- Engine modules -->
   <script>
+// ===== src/engine/constants.js =====
 // Maripoga's Errand - Core Constants
 // NES resolution: 256x240
 const SCREEN_WIDTH = 256;
@@ -76,8 +76,8 @@ const HOP_DURATION = 200; // ms for hop animation
 const TARGET_FPS = 60;
 const FRAME_TIME = 1000 / TARGET_FPS;
 
-</script>
-  <script>
+
+// ===== src/engine/palette.js =====
 // NES-inspired color palette
 // Subset of the NES 54-color palette, curated for Maripoga's Errand
 const PALETTE = {
@@ -191,8 +191,8 @@ const TILE_ACCENT_COLORS = {
   [TILE_SMART]:   PALETTE.SMART_MID,
 };
 
-</script>
-  <script>
+
+// ===== src/engine/input.js =====
 // Input handling - keyboard state tracking
 const Input = {
   keys: {},
@@ -237,8 +237,8 @@ const Input = {
   },
 };
 
-</script>
-  <script>
+
+// ===== src/engine/renderer.js =====
 // Canvas renderer - handles drawing at NES resolution
 const Renderer = {
   canvas: null,
@@ -403,8 +403,8 @@ const Renderer = {
   },
 };
 
-</script>
-  <script>
+
+// ===== src/engine/grid.js =====
 // Grid state management - the 16x14 tile grid
 const Grid = {
   tiles: [],
@@ -485,9 +485,8 @@ const Grid = {
   },
 };
 
-</script>
-  <!-- Art / Sprites -->
-  <script>
+
+// ===== src/art/sprites.js =====
 // Sprite definitions - pixel art as 2D arrays of palette colors
 // Each sprite is 16x16, null = transparent
 // These are programmer-art placeholders; the Art agent will refine them.
@@ -1114,9 +1113,8 @@ const Sprites = {
   },
 };
 
-</script>
-  <!-- Audio -->
-  <script>
+
+// ===== src/audio/audio.js =====
 // Chiptune audio engine using Web Audio API
 // NES-like: pulse (square) waves, triangle, noise
 const Audio = {
@@ -1639,9 +1637,8 @@ const Audio = {
   },
 };
 
-</script>
-  <!-- Gameplay modules -->
-  <script>
+
+// ===== src/gameplay/decoration.js =====
 // Scenic decoration for the game board - reed wall (top) and lily pad edge (bottom)
 // Row 0 = reed wall under HUD, Row 13 = lily pad border at bottom
 // Architect waves (every 10th) get cityscape + highway fence instead
@@ -1927,8 +1924,8 @@ const Decoration = {
   },
 };
 
-</script>
-  <script>
+
+// ===== src/gameplay/player.js =====
 // Player (Maripoga) - movement, hopping, tile claiming
 const Player = {
   col: 0,
@@ -1982,11 +1979,26 @@ const Player = {
       this.hopTimer -= dt;
       if (this.hopTimer <= 0) {
         this.isHopping = false;
-        // Check if landed on spike — instant death!
+        // Check if landed on spike
         const landedTile = Grid.get(this.col, this.row);
+        const isPowered = (typeof Bonuses !== 'undefined') && Bonuses.invincibilityBoost;
         if (landedTile === TILE_SPIKE) {
-          this.die();
-          return;
+          if (isPowered) {
+            // Powered player survives spikes and converts to green
+            Grid.set(this.col, this.row, TILE_GREEN);
+            Audio.sfxClaim(true);
+            // Kill any snail on this tile
+            for (const enemy of Enemies.list) {
+              if (enemy.alive && enemy.col === this.col && enemy.row === this.row) {
+                Bonuses.killEnemyByInvincibility(enemy);
+                break;
+              }
+            }
+            Encircle.checkAll();
+          } else {
+            this.die();
+            return;
+          }
         }
         // Zombie mechanic evolution: enemy tiles need extra hops to clear
         if (Waves.zombieLevel >= 1) {
@@ -2111,8 +2123,8 @@ const Player = {
   },
 };
 
-</script>
-  <script>
+
+// ===== src/gameplay/enemies.js =====
 // Enemy frog system - with snake, ladybug, smart frog, and smart deployment scheduling
 const Enemies = {
   list: [],
@@ -2338,13 +2350,15 @@ const Enemies = {
             // Ladybug resets tile to TILE_NEUTRAL
             Grid.set(enemy.col, enemy.row, TILE_NEUTRAL);
           } else if (enemy.tileState !== null) {
-            // Check if enemy landed in a fully green-enclosed area (e.g. blue teleport)
-            // If surrounded by green on all paths to edge, the enemy is captured
-            if (this._isEnclosedByGreen(enemy.col, enemy.row)) {
-              enemy.alive = false;
-              Player.addScore(this.getKillScore(enemy.type));
-              Audio.sfxCapture();
-              continue;
+            // Blue frog teleport: check if landed in fully green-enclosed area
+            if (enemy.justTeleported) {
+              enemy.justTeleported = false;
+              if (this._isEnclosedByGreen(enemy.col, enemy.row)) {
+                enemy.alive = false;
+                Player.addScore(this.getKillScore(enemy.type));
+                Audio.sfxCapture();
+                continue;
+              }
             }
             // -1 point when enemy reclaims a green tile
             if (Grid.get(enemy.col, enemy.row) === TILE_GREEN) {
@@ -2375,6 +2389,7 @@ const Enemies = {
             enemy.row = newRow;
             enemy.isHopping = true;
             enemy.hopTimer = HOP_DURATION;
+            enemy.justTeleported = true; // Flag for enclosed check on landing
             Audio.sfxEnemyHop();
             continue;
           }
@@ -2627,8 +2642,8 @@ const Enemies = {
   },
 };
 
-</script>
-  <script>
+
+// ===== src/gameplay/bonuses.js =====
 // Bonus items system - flies and green bug
 // Spawns collectible bonus items on the field periodically
 const Bonuses = {
@@ -3006,8 +3021,8 @@ const Bonuses = {
   },
 };
 
-</script>
-  <script>
+
+// ===== src/gameplay/encircle.js =====
 // Encirclement detection - Qix/Amidar style flood-fill
 // Sequential animation pipeline: fill -> kills (one at a time) -> bonus -> clear
 // Also handles enemy (bad frog) encirclement detection (4A)
@@ -3394,14 +3409,15 @@ const Encircle = {
   },
 };
 
-</script>
-  <script>
+
+// ===== src/gameplay/waves.js =====
 // Wave system - escalating difficulty with structured progression
 const Waves = {
   current: 1,
   targetPercent: 0.65,
   timer: 0,
   waveStartTime: 0,
+  waveElapsed: 0, // Accumulated elapsed time (pauses don't count)
   hurryUpPlayed: false,
   snailsSpawned: 0,
   zombieLevel: 0, // 0 = normal, 1 = after wave 5 (enemy tiles need 2 hops), 2 = after wave 15 (3 hops)
@@ -3493,6 +3509,7 @@ const Waves = {
       Bonuses.init();
     }
     this.waveStartTime = performance.now();
+    this.waveElapsed = 0;
     this.hurryUpPlayed = false;
     this.snailsSpawned = 0;
 
@@ -3715,7 +3732,8 @@ const Waves = {
 
   // Update wave timer and spawn snails
   update(dt) {
-    const elapsedTime = performance.now() - this.waveStartTime;
+    this.waveElapsed += dt; // Accumulate only when game is running (not paused)
+    const elapsedTime = this.waveElapsed;
 
     // Hurry up warning at 30 seconds
     if (elapsedTime >= 30000 && !this.hurryUpPlayed) {
@@ -3770,8 +3788,8 @@ const Waves = {
   },
 };
 
-</script>
-  <script>
+
+// ===== src/gameplay/hud.js =====
 // HUD - score, lives, wave, fill percentage
 // All text on 8x8 grid, in the top HUD row (16px tall)
 const HUD = {
@@ -3825,9 +3843,8 @@ const HUD = {
   },
 };
 
-</script>
-  <!-- Main game -->
-  <script>
+
+// ===== src/main.js =====
 // Main game loop - ties everything together
 const Game = {
   state: STATE_TITLE,
@@ -4172,6 +4189,7 @@ const Game = {
 // Boot!
 Game.run();
 
-</script>
+
+  </script>
 </body>
 </html>

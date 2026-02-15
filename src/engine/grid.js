@@ -40,10 +40,12 @@ const Grid = {
     return n;
   },
 
-  // Get fill percentage for a state (excludes hazard tiles from total)
+  // Get fill percentage for a state (only excludes water from total)
+  // Spike tiles, enemy tiles, etc. all count as "unfilled" in the denominator
+  // so they prevent a perfect score
   fillPercent(state) {
-    const hazardCount = this.count(TILE_SPIKE) + this.count(TILE_WATER);
-    const total = GRID_COLS * GRID_ROWS - hazardCount;
+    const waterCount = this.count(TILE_WATER);
+    const total = GRID_COLS * GRID_ROWS - waterCount;
     return this.count(state) / total;
   },
 
