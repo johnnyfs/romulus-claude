@@ -40,6 +40,8 @@ const Game = {
         Player.update(dt);
         Enemies.update(dt);
         Encircle.update(dt);
+        // Continuously check encirclement (not just on player hop)
+        Encircle.checkAll();
 
         // Collision check (skip if invincible)
         if (Enemies.checkCollisionWithPlayer() && !Player.isHopping && !Player.invincible) {
