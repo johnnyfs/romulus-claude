@@ -78,6 +78,10 @@ const Player = {
           this.addScore(10);
           Audio.sfxClaim(isEnemy);
         }
+        // Check for bonus item pickup on landing
+        if (typeof Bonuses !== 'undefined') {
+          Bonuses.checkPlayerPickup(this.col, this.row);
+        }
         // Check for encirclement after claiming
         Encircle.checkAll();
       }
@@ -99,7 +103,8 @@ const Player = {
           this.col = newCol;
           this.row = newRow;
           this.isHopping = true;
-          this.hopTimer = HOP_DURATION;
+          // Use speed boost duration if active
+          this.hopTimer = (typeof Bonuses !== 'undefined') ? Bonuses.getPlayerHopDuration() : HOP_DURATION;
           Audio.sfxHop();
         }
       }
@@ -111,7 +116,8 @@ const Player = {
     const targetX = this.col * TILE_SIZE;
     const targetY = (this.row + GRID_OFFSET_Y) * TILE_SIZE; // + GRID_OFFSET_Y for grid offset
     if (this.isHopping) {
-      const t = 1 - (this.hopTimer / HOP_DURATION);
+      const hopDur = (typeof Bonuses !== 'undefined') ? Bonuses.getPlayerHopDuration() : HOP_DURATION;
+      const t = 1 - (this.hopTimer / hopDur);
       const fromX = this.hopFromCol * TILE_SIZE;
       const fromY = (this.hopFromRow + GRID_OFFSET_Y) * TILE_SIZE;
       // Arc: lerp position with a vertical bounce

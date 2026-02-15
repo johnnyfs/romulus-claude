@@ -20,6 +20,7 @@ const Game = {
   start() {
     Player.lives = 3;
     Player.score = 0;
+    Bonuses.init();
     Waves.init();
     this.state = STATE_PLAYING;
     Audio.startMusic();
@@ -66,6 +67,7 @@ const Game = {
 
         Player.update(dt);
         Enemies.update(dt);
+        Bonuses.update(dt);
         if (!Encircle.isAnimating()) {
           Encircle.update(dt);
         }
@@ -86,11 +88,21 @@ const Game = {
 
         // Collision check with enemies (skip if invincible)
         if (Enemies.checkCollisionWithPlayer() && !Player.isHopping && !Player.invincible) {
-          Player.die();
-          Player.justDied = false;
-          this.state = STATE_DYING;
-          this.deathTimer = 1500;
-          break;
+          // If invincibility powerup is active, kill the enemy instead
+          if (Bonuses.invincibilityBoost) {
+            for (const enemy of Enemies.list) {
+              if (enemy.alive && enemy.col === Player.col && enemy.row === Player.row) {
+                Bonuses.killEnemyByInvincibility(enemy);
+                break;
+              }
+            }
+          } else {
+            Player.die();
+            Player.justDied = false;
+            this.state = STATE_DYING;
+            this.deathTimer = 1500;
+            break;
+          }
         }
 
         // Win condition check (non-animating path)
@@ -176,6 +188,7 @@ const Game = {
         Grid.draw();
         Decoration.draw();
         Enemies.draw();
+        Bonuses.draw();
         Player.draw();
         Encircle.draw();
         HUD.draw();
@@ -189,6 +202,7 @@ const Game = {
         Grid.draw();
         Decoration.draw();
         Enemies.draw(); // Show enemies during phase 1
+        Bonuses.draw();
         Player.draw();
         Encircle.draw();
         HUD.draw();
