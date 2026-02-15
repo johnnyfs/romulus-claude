@@ -9,6 +9,8 @@ const Player = {
   lives: 3,
   score: 0,
   alive: true,
+  invincible: false,
+  invincibilityTimer: 0,
 
   init() {
     // Start at center of grid
@@ -27,18 +29,35 @@ const Player = {
     this.isHopping = false;
     this.hopTimer = 0;
     this.alive = true;
+    this.invincible = true;
+    this.invincibilityTimer = 1500; // 1.5 seconds of invincibility
   },
 
   update(dt) {
     if (!this.alive) return;
+
+    // Update invincibility timer
+    if (this.invincible) {
+      this.invincibilityTimer -= dt;
+      if (this.invincibilityTimer <= 0) {
+        this.invincible = false;
+        this.invincibilityTimer = 0;
+      }
+    }
 
     if (this.isHopping) {
       this.hopTimer -= dt;
       if (this.hopTimer <= 0) {
         this.isHopping = false;
         // Claim tile on landing
+        const oldTile = Grid.get(this.col, this.row);
         Grid.set(this.col, this.row, TILE_GREEN);
-        Audio.sfxClaim();
+        // Award points for NEW tiles only (not re-claiming green)
+        if (oldTile !== TILE_GREEN) {
+          const isEnemy = oldTile === TILE_RED || oldTile === TILE_PURPLE || oldTile === TILE_BLUE;
+          this.addScore(10);
+          Audio.sfxClaim(isEnemy);
+        }
         // Check for encirclement after claiming
         Encircle.checkAll();
       }
@@ -85,6 +104,10 @@ const Player = {
 
   draw() {
     const pos = this.getPixelPos();
+    // Blink during invincibility (4 blinks per second)
+    if (this.invincible && Math.floor(this.invincibilityTimer / 125) % 2) {
+      return; // Skip drawing to create blink effect
+    }
     const sprite = Sprites.getSprite('player', this.isHopping);
     Renderer.drawSprite(sprite, pos.x, pos.y);
   },
