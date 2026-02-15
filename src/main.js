@@ -6,6 +6,7 @@ const Game = {
   waveClearPhase: 0,
   deathTimer: 0,
   highScore: 0,
+  lastClearBonus: 0, // Stored for display during clear phase
 
   init() {
     Renderer.init();
@@ -39,23 +40,35 @@ const Game = {
           break;
         }
 
-        // When pipeline is animating, FREEZE all movement
+        // When pipeline is animating, conditionally freeze movement
         if (Encircle.isAnimating()) {
-          Encircle.update(dt);
-          // After pipeline completes, check for wave clear
-          if (!Encircle.isAnimating() && Waves.checkWinCondition()) {
-            this.state = STATE_WAVE_CLEAR;
-            this.waveClearPhase = CLEAR_SHOW_MESSAGE;
-            this.waveClearTimer = 1000;
-            Audio.sfxWaveClear();
-            Player.addScore(500);
+          if (Encircle.movementFrozen) {
+            // Full freeze: only update encircle pipeline
+            Encircle.update(dt);
+            // After pipeline completes, check for wave clear
+            if (!Encircle.isAnimating() && Waves.checkWinCondition()) {
+              const clearBonus = this._calculateClearBonus();
+              Player.addScore(clearBonus);
+              this.lastClearBonus = clearBonus;
+              this.state = STATE_WAVE_CLEAR;
+              this.waveClearPhase = CLEAR_SHOW_MESSAGE;
+              this.waveClearTimer = 1000;
+              Audio.sfxWaveClear();
+            }
+            break;
           }
-          break;
+          // Not frozen: pipeline animates alongside normal gameplay
+          // (kill/bonus animations play while player keeps moving)
+          Encircle.update(dt);
+          // After pipeline completes during unfrozen play, just continue —
+          // win condition is already met or will be checked below
         }
 
         Player.update(dt);
         Enemies.update(dt);
-        Encircle.update(dt);
+        if (!Encircle.isAnimating()) {
+          Encircle.update(dt);
+        }
         Waves.update(dt);
         // Continuously check encirclement (not just on player hop)
         Encircle.checkAll();
@@ -79,11 +92,13 @@ const Game = {
 
         // Win condition check (non-animating path)
         if (!Player.isHopping && Waves.checkWinCondition()) {
+          const clearBonus = this._calculateClearBonus();
+          Player.addScore(clearBonus);
+          this.lastClearBonus = clearBonus;
           this.state = STATE_WAVE_CLEAR;
           this.waveClearPhase = CLEAR_SHOW_MESSAGE;
           this.waveClearTimer = 1000;
           Audio.sfxWaveClear();
-          Player.addScore(500);
         }
         break;
 
@@ -178,6 +193,12 @@ const Game = {
         if (this.waveClearPhase === CLEAR_SHOW_MESSAGE) {
           // Phase 1: Show CLEAR! with board visible
           Renderer.drawText('CLEAR!', 104, 120, PALETTE.GREEN_LIGHT);
+          // Show clear bonus below
+          if (this.lastClearBonus > 0) {
+            const bonusText = '+' + this.lastClearBonus;
+            const bx = 128 - bonusText.length * 4; // Center text
+            Renderer.drawText(bonusText, bx, 134, PALETTE.SCORE_COLOR);
+          }
         } else if (this.waveClearPhase === CLEAR_BONUS_FILL) {
           // Phase 2: Flash remaining tiles (bonus clear effect)
           if (Math.floor(this.waveClearTimer / 100) % 2) {
@@ -220,6 +241,16 @@ const Game = {
         Renderer.drawText('PRESS ENTER', 84, 172, PALETTE.HUD_TEXT);
         break;
     }
+  },
+
+  // Calculate clear bonus: 10 pts per % over target, doubled if 100%
+  _calculateClearBonus() {
+    const actualPercent = Math.round(Grid.fillPercent(TILE_GREEN) * 100);
+    const targetPercent = Math.round(Waves.targetPercent * 100);
+    const overPercent = Math.max(0, actualPercent - targetPercent);
+    let bonus = overPercent * 10;
+    if (actualPercent >= 100) bonus *= 2;
+    return bonus;
   },
 
   _drawTitle() {

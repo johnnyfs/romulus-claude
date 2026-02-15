@@ -8,6 +8,7 @@ const Encircle = {
 
   // Animation pipeline state machine
   pipeline: null, // null = idle, or {stage, ...data}
+  movementFrozen: false, // true = freeze player+enemies during pipeline
   // Stages: 'filling', 'killing', 'kill_wait', 'bonus', 'bonus_wait', 'done'
 
   checkAll() {
@@ -78,6 +79,7 @@ const Encircle = {
     else if (region.length <= 30) Audio.sfxFillLarge();
     else Audio.sfxFillHuge();
 
+    this.movementFrozen = true; // Freeze movement when pipeline starts
     this.pipeline = {
       stage: 'filling',
       queue: [...region],
@@ -112,7 +114,13 @@ const Encircle = {
             p.index++;
           }
           if (p.index >= p.queue.length) {
-            // Fill done — move to kills or bonus
+            // Fill done — check if wave is cleared to decide freeze behavior
+            // If wave NOT cleared, unfreeze movement so player can keep playing
+            // while kill/bonus animations play out visually
+            if (!Waves.checkWinCondition()) {
+              this.movementFrozen = false;
+            }
+            // Move to kills or bonus
             if (p.enemies.length > 0) {
               p.stage = 'killing';
               p.killIndex = 0;
@@ -228,8 +236,23 @@ const Encircle = {
     }
   },
 
+  // Tiered fill score based on number of tiles cleared
+  calculateFillScore(tileCount) {
+    // Special high-value encirclements (near-max board)
+    if (tileCount >= 126) return 5000;
+    if (tileCount >= 125) return 4000;
+    if (tileCount >= 124) return 3500;
+    // Tiered formula
+    if (tileCount >= 64) return 1500 + 50 * (tileCount - 64);
+    if (tileCount >= 32) return 500 + 25 * (tileCount - 32);
+    if (tileCount >= 16) return 100 + 10 * (tileCount - 16);
+    if (tileCount >= 8) return 10 + 5 * (tileCount - 8);
+    return tileCount; // <8 tiles: 1 point per tile
+  },
+
   _showFillBonus(p) {
-    const fillBonus = p.tileCount * 2 * this.fillComboMultiplier;
+    const baseScore = this.calculateFillScore(p.tileCount);
+    const fillBonus = baseScore * this.fillComboMultiplier;
     Player.addScore(fillBonus);
 
     let cx = 0, cy = 0;
