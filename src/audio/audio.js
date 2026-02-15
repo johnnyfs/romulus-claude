@@ -428,4 +428,44 @@ const Audio = {
       this.playNote(freq * 1.5, i * 0.1 + 0.05, 0.15, 'triangle', 0.15, 0.01, 0.06);
     });
   },
+
+  // Snake slither sound - low hissing slide
+  sfxSnakeMove() {
+    if (!this.enabled) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    // Sliding pitch from 200 down to 120
+    osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.15);
+    gain.gain.value = 0;
+    gain.gain.linearRampToValueAtTime(0.06, this.ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(this.ctx.currentTime);
+    osc.stop(this.ctx.currentTime + 0.15);
+    // Add hiss noise
+    this.playNoise(0, 0.1, 0.04);
+  },
+
+  // Ladybug squish - satisfying pop
+  sfxLadybugSquish() {
+    this.playNote(392, 0, 0.06, 'square', 0.15, 0.005, 0.02);
+    this.playNote(523, 0.04, 0.08, 'triangle', 0.12, 0.005, 0.03);
+    this.playNoise(0, 0.05, 0.08);
+  },
+
+  // Enemy deploy sound - ominous spawn
+  sfxEnemyDeploy() {
+    this.playNote(110, 0, 0.12, 'triangle', 0.15, 0.01, 0.05);
+    this.playNote(165, 0.08, 0.1, 'square', 0.1, 0.005, 0.04);
+  },
+
+  // Enemy encirclement danger sound - alarm
+  sfxEnemyEncircle() {
+    this.playNote(440, 0, 0.1, 'square', 0.2, 0.005, 0.04);
+    this.playNote(330, 0.08, 0.1, 'square', 0.2, 0.005, 0.04);
+    this.playNote(440, 0.16, 0.1, 'square', 0.2, 0.005, 0.04);
+  },
 };

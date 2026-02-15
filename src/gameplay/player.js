@@ -64,12 +64,17 @@ const Player = {
           Encircle.checkAll();
           return;
         }
+        // Check for ladybug stomp on landing (3B)
+        const stompTarget = Enemies.checkPlayerStompAt(this.col, this.row);
+        if (stompTarget) {
+          Enemies.stompEnemy(stompTarget);
+        }
         // Claim tile on landing
         const oldTile = landedTile;
         Grid.set(this.col, this.row, TILE_GREEN);
         // Award points for NEW tiles only (not re-claiming green)
         if (oldTile !== TILE_GREEN) {
-          const isEnemy = oldTile === TILE_RED || oldTile === TILE_PURPLE || oldTile === TILE_BLUE;
+          const isEnemy = oldTile === TILE_RED || oldTile === TILE_PURPLE || oldTile === TILE_BLUE || oldTile === TILE_SMART;
           this.addScore(10);
           Audio.sfxClaim(isEnemy);
         }

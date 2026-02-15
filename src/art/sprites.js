@@ -331,6 +331,117 @@ const Sprites = {
       [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
     ];
 
+    // SNAKE - Green/yellow elongated serpent, slithering
+    const Sg = PALETTE.SNAKE_GREEN;
+    const Sgd = PALETTE.SNAKE_GREEN_DARK;
+    const Sy = PALETTE.SNAKE_YELLOW;
+
+    // Snake idle - coiled
+    this.snake_idle = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,Sg,Sg,Sg,Sg,_,_,_,_,_,_],
+      [_,_,_,_,_,Sg,Sy,Sg,Sg,Sy,Sg,_,_,_,_,_],
+      [_,_,_,_,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,_,_,_,_],
+      [_,_,_,Sg,Sgd,Sg,Sgd,Sg,Sg,Sgd,Sg,Sgd,Sg,_,_,_],
+      [_,_,Sg,Sg,Sg,Sgd,Sg,Sg,Sg,Sg,Sgd,Sg,Sg,Sg,_,_],
+      [_,_,Sg,Sy,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sy,Sg,_,_],
+      [_,_,_,Sg,Sg,Sg,W,B,_,W,B,Sg,Sg,_,_,_],
+      [_,_,_,_,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,_,_,_,_],
+      [_,_,_,_,_,Sg,Sgd,R,R,Sgd,Sg,_,_,_,_,_],
+      [_,_,_,_,_,_,Sg,Sg,Sg,Sg,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // Snake moving - stretched horizontal
+    this.snake_move = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,Sg,Sg,Sg,_,_,_,_,_,_,_,_,_,_,_,_],
+      [Sg,Sy,Sg,Sy,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,_,_],
+      [Sg,Sg,Sgd,Sg,Sgd,Sg,Sy,Sg,Sgd,Sg,Sy,Sg,W,B,_,_],
+      [_,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,Sg,W,B,_,_],
+      [_,_,_,_,Sg,Sg,Sy,Sg,Sgd,Sg,Sy,Sg,Sg,R,R,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // LADYBUG - Recolored snail (red shell instead of orange)
+    const Lb = PALETTE.LADYBUG_RED;
+    const Lbd = PALETTE.LADYBUG_RED_DARK;
+
+    this.ladybug = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,Lb,Lb,Lb,Lb,_,_,_,_,_,_,_],
+      [_,_,_,_,Lb,Lbd,Lb,Lbd,Lb,Lb,_,_,_,_,_,_],
+      [_,_,_,Lb,Lbd,Lb,Lbd,Lb,Lbd,Lb,Lb,_,_,_,_,_],
+      [_,_,_,Lb,Lb,Lb,Lb,Lb,Lb,Lbd,Lb,_,_,_,_,_],
+      [_,_,_,_,SnB,SnB,SnB,SnB,Lb,Lb,_,_,_,_,_,_],
+      [_,_,_,SnB,W,B,SnB,W,B,SnB,SnB,_,_,_,_,_],
+      [_,_,_,SnB,SnB,SnB,SnB,SnB,SnB,SnB,SnB,_,_,_,_,_],
+      [_,_,_,_,SnB,_,_,_,_,_,SnB,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
+    // SMART FROG - Off-white/cream frog with red bow tie
+    const Sm = PALETTE.SMART;
+    const Smd = PALETTE.SMART_DARK;
+    const BT = PALETTE.SCARF; // Bow tie = red
+
+    this.smart_frog_idle = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,E,E,E,_,_,_,_,E,E,E,_,_,_],
+      [_,_,E,E,B,E,_,_,_,_,E,B,E,E,_,_],
+      [_,_,E,E,E,Sm,Sm,_,_,Sm,Sm,E,E,E,_,_],
+      [_,_,_,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,_,_,_],
+      [_,_,_,Sm,Smd,Sm,Sm,Sm,Sm,Sm,Sm,Smd,Sm,_,_,_],
+      [_,_,Sm,Sm,Sm,B,B,B,B,B,B,Sm,Sm,Sm,_,_],
+      [_,_,Sm,Sm,Sm,W,W,W,W,W,W,Sm,Sm,Sm,_,_],
+      [_,_,_,_,BT,BT,_,BT,BT,_,BT,BT,_,_,_,_],
+      [_,_,_,_,_,BT,BT,BT,BT,BT,BT,_,_,_,_,_],
+      [_,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,_],
+      [_,Sm,Sm,Smd,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Smd,Sm,Sm,_],
+      [_,_,Sm,Sm,Sm,_,Sm,Sm,Sm,Sm,_,Sm,Sm,Sm,_,_],
+      [_,Sm,Sm,Sm,_,_,Sm,Sm,Sm,Sm,_,_,Sm,Sm,Sm,_],
+      [_,Sm,Sm,_,_,_,_,_,_,_,_,_,_,Sm,Sm,_],
+      [Sm,Sm,Smd,_,_,_,_,_,_,_,_,_,_,Smd,Sm,Sm],
+    ];
+
+    this.smart_frog_hop = [
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,E,E,E,_,_,_,_,E,E,E,_,_,_],
+      [_,_,E,E,B,E,_,_,_,_,E,B,E,E,_,_],
+      [_,_,E,E,E,Sm,Sm,_,_,Sm,Sm,E,E,E,_,_],
+      [_,_,_,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,_,_,_],
+      [_,_,Sm,Sm,Smd,Sm,Sm,Sm,Sm,Sm,Sm,Smd,Sm,Sm,_,_],
+      [_,_,Sm,Sm,B,B,B,B,B,B,B,B,Sm,Sm,_,_],
+      [_,_,_,BT,BT,_,BT,BT,_,BT,BT,_,_,_,_,_],
+      [_,_,_,_,BT,BT,BT,BT,BT,BT,_,_,_,_,_,_],
+      [_,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,_],
+      [Sm,Sm,Sm,Smd,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Smd,Sm,Sm,Sm],
+      [Sm,Sm,Sm,_,Sm,Sm,Sm,Sm,Sm,Sm,Sm,Sm,_,Sm,Sm,Sm],
+      [Sm,_,_,_,_,Sm,Sm,_,_,Sm,Sm,_,_,_,_,Sm],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+      [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    ];
+
     // No outlines — clean solid sprites for authentic NES look
   },
 
@@ -342,6 +453,9 @@ const Sprites = {
     if (type === 'blue') return isHopping ? this.blue_frog_hop : this.blue_frog_idle;
     if (type === 'zombie') return isHopping ? this.zombie_frog_hop : this.zombie_frog_idle;
     if (type === 'snail') return this.snail;
+    if (type === 'snake') return isHopping ? this.snake_move : this.snake_idle;
+    if (type === 'ladybug') return this.ladybug;
+    if (type === 'smart') return isHopping ? this.smart_frog_hop : this.smart_frog_idle;
     return this.maripoga_idle;
   },
 };
