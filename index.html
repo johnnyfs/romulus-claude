@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maripoga's Errand</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <!-- Engine modules -->
+  <script src="src/engine/constants.js"></script>
+  <script src="src/engine/palette.js"></script>
+  <script src="src/engine/input.js"></script>
+  <script src="src/engine/renderer.js"></script>
+  <script src="src/engine/grid.js"></script>
+  <!-- Art / Sprites -->
+  <script src="src/art/sprites.js"></script>
+  <!-- Audio -->
+  <script src="src/audio/audio.js"></script>
+  <!-- Gameplay modules -->
+  <script src="src/gameplay/player.js"></script>
+  <script src="src/gameplay/enemies.js"></script>
+  <script src="src/gameplay/encircle.js"></script>
+  <script src="src/gameplay/waves.js"></script>
+  <script src="src/gameplay/hud.js"></script>
+  <!-- Main game -->
+  <script src="src/main.js"></script>
+</body>
+</html>
