@@ -51,11 +51,26 @@ const Player = {
       this.hopTimer -= dt;
       if (this.hopTimer <= 0) {
         this.isHopping = false;
-        // Check if landed on spike — instant death!
+        // Check if landed on spike
         const landedTile = Grid.get(this.col, this.row);
+        const isPowered = (typeof Bonuses !== 'undefined') && Bonuses.invincibilityBoost;
         if (landedTile === TILE_SPIKE) {
-          this.die();
-          return;
+          if (isPowered) {
+            // Powered player survives spikes and converts to green
+            Grid.set(this.col, this.row, TILE_GREEN);
+            Audio.sfxClaim(true);
+            // Kill any snail on this tile
+            for (const enemy of Enemies.list) {
+              if (enemy.alive && enemy.col === this.col && enemy.row === this.row) {
+                Bonuses.killEnemyByInvincibility(enemy);
+                break;
+              }
+            }
+            Encircle.checkAll();
+          } else {
+            this.die();
+            return;
+          }
         }
         // Zombie mechanic evolution: enemy tiles need extra hops to clear
         if (Waves.zombieLevel >= 1) {
