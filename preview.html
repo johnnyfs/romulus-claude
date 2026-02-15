@@ -22,8 +22,8 @@
 </head>
 <body>
   <canvas id="game"></canvas>
+  <!-- Engine modules -->
   <script>
-// ===== src/engine/constants.js =====
 // Maripoga's Errand - Core Constants
 // NES resolution: 256x240
 const SCREEN_WIDTH = 256;
@@ -76,8 +76,8 @@ const HOP_DURATION = 200; // ms for hop animation
 const TARGET_FPS = 60;
 const FRAME_TIME = 1000 / TARGET_FPS;
 
-
-// ===== src/engine/palette.js =====
+</script>
+  <script>
 // NES-inspired color palette
 // Subset of the NES 54-color palette, curated for Maripoga's Errand
 const PALETTE = {
@@ -131,7 +131,7 @@ const PALETTE = {
 
   // Water / Swamp background
   WATER_BG:    '#0a1520',
-  WATER_DAY:   '#1a4060',    // Lighter/bluer water for daytime
+  WATER_DAY:   '#3a7bc8',    // Match sky behind reeds for daytime water
   NEUTRAL_HI:  '#353545',
 
   // Decoration — reeds
@@ -191,8 +191,8 @@ const TILE_ACCENT_COLORS = {
   [TILE_SMART]:   PALETTE.SMART_MID,
 };
 
-
-// ===== src/engine/input.js =====
+</script>
+  <script>
 // Input handling - keyboard state tracking
 const Input = {
   keys: {},
@@ -237,8 +237,8 @@ const Input = {
   },
 };
 
-
-// ===== src/engine/renderer.js =====
+</script>
+  <script>
 // Canvas renderer - handles drawing at NES resolution
 const Renderer = {
   canvas: null,
@@ -403,8 +403,8 @@ const Renderer = {
   },
 };
 
-
-// ===== src/engine/grid.js =====
+</script>
+  <script>
 // Grid state management - the 16x14 tile grid
 const Grid = {
   tiles: [],
@@ -447,10 +447,12 @@ const Grid = {
     return n;
   },
 
-  // Get fill percentage for a state (excludes hazard tiles from total)
+  // Get fill percentage for a state (only excludes water from total)
+  // Spike tiles, enemy tiles, etc. all count as "unfilled" in the denominator
+  // so they prevent a perfect score
   fillPercent(state) {
-    const hazardCount = this.count(TILE_SPIKE) + this.count(TILE_WATER);
-    const total = GRID_COLS * GRID_ROWS - hazardCount;
+    const waterCount = this.count(TILE_WATER);
+    const total = GRID_COLS * GRID_ROWS - waterCount;
     return this.count(state) / total;
   },
 
@@ -485,8 +487,9 @@ const Grid = {
   },
 };
 
-
-// ===== src/art/sprites.js =====
+</script>
+  <!-- Art / Sprites -->
+  <script>
 // Sprite definitions - pixel art as 2D arrays of palette colors
 // Each sprite is 16x16, null = transparent
 // These are programmer-art placeholders; the Art agent will refine them.
@@ -1113,8 +1116,9 @@ const Sprites = {
   },
 };
 
-
-// ===== src/audio/audio.js =====
+</script>
+  <!-- Audio -->
+  <script>
 // Chiptune audio engine using Web Audio API
 // NES-like: pulse (square) waves, triangle, noise
 const Audio = {
@@ -1637,8 +1641,9 @@ const Audio = {
   },
 };
 
-
-// ===== src/gameplay/decoration.js =====
+</script>
+  <!-- Gameplay modules -->
+  <script>
 // Scenic decoration for the game board - reed wall (top) and lily pad edge (bottom)
 // Row 0 = reed wall under HUD, Row 13 = lily pad border at bottom
 // Architect waves (every 10th) get cityscape + highway fence instead
@@ -1924,8 +1929,8 @@ const Decoration = {
   },
 };
 
-
-// ===== src/gameplay/player.js =====
+</script>
+  <script>
 // Player (Maripoga) - movement, hopping, tile claiming
 const Player = {
   col: 0,
@@ -2123,8 +2128,8 @@ const Player = {
   },
 };
 
-
-// ===== src/gameplay/enemies.js =====
+</script>
+  <script>
 // Enemy frog system - with snake, ladybug, smart frog, and smart deployment scheduling
 const Enemies = {
   list: [],
@@ -2642,8 +2647,8 @@ const Enemies = {
   },
 };
 
-
-// ===== src/gameplay/bonuses.js =====
+</script>
+  <script>
 // Bonus items system - flies and green bug
 // Spawns collectible bonus items on the field periodically
 const Bonuses = {
@@ -3021,8 +3026,8 @@ const Bonuses = {
   },
 };
 
-
-// ===== src/gameplay/encircle.js =====
+</script>
+  <script>
 // Encirclement detection - Qix/Amidar style flood-fill
 // Sequential animation pipeline: fill -> kills (one at a time) -> bonus -> clear
 // Also handles enemy (bad frog) encirclement detection (4A)
@@ -3409,8 +3414,8 @@ const Encircle = {
   },
 };
 
-
-// ===== src/gameplay/waves.js =====
+</script>
+  <script>
 // Wave system - escalating difficulty with structured progression
 const Waves = {
   current: 1,
@@ -3788,8 +3793,8 @@ const Waves = {
   },
 };
 
-
-// ===== src/gameplay/hud.js =====
+</script>
+  <script>
 // HUD - score, lives, wave, fill percentage
 // All text on 8x8 grid, in the top HUD row (16px tall)
 const HUD = {
@@ -3843,8 +3848,9 @@ const HUD = {
   },
 };
 
-
-// ===== src/main.js =====
+</script>
+  <!-- Main game -->
+  <script>
 // Main game loop - ties everything together
 const Game = {
   state: STATE_TITLE,
@@ -4189,7 +4195,6 @@ const Game = {
 // Boot!
 Game.run();
 
-
-  </script>
+</script>
 </body>
 </html>

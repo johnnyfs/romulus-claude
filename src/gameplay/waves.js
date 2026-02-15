@@ -172,9 +172,13 @@ const Waves = {
     }
   },
 
-  // Spawn zombie-only wave. Zombie count = wave / 5, capped at 6.
+  // Spawn zombie-only wave. W5=2 zombies, W15=4, then +1 per zombie wave after, cap 6.
   _spawnZombieWave(wave) {
-    const numZombies = Math.min(6, Math.ceil(wave / 5));
+    let numZombies;
+    if (wave <= 5) numZombies = 2;
+    else if (wave <= 15) numZombies = 4;
+    else numZombies = Math.min(6, 4 + Math.floor((wave - 15) / 10));
+
     const positions = [
       [2, 2],
       [GRID_COLS - 3, 2],

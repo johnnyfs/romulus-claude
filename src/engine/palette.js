@@ -51,7 +51,7 @@ const PALETTE = {
 
   // Water / Swamp background
   WATER_BG:    '#0a1520',
-  WATER_DAY:   '#3a7bc8',    // Match sky behind reeds for daytime water
+  WATER_DAY:   '#1a4060',    // Lighter/bluer water for daytime
   NEUTRAL_HI:  '#353545',
 
   // Decoration — reeds

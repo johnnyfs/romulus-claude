@@ -244,11 +244,12 @@ const Encircle = {
   },
 
   // Tiered fill score based on number of tiles cleared
+  // Max possible is 135 (walk down from center, encircle entire field)
   calculateFillScore(tileCount) {
-    // Special high-value encirclements (near-max board)
-    if (tileCount >= 126) return 5000;
-    if (tileCount >= 125) return 4000;
-    if (tileCount >= 124) return 3500;
+    // Perfect encirclement — extremely rare
+    if (tileCount >= 135) return 5000;
+    // Near-max: 124-134 = 3500 + 100 per tile over 124
+    if (tileCount >= 124) return 3500 + 100 * (tileCount - 124);
     // Tiered formula
     if (tileCount >= 64) return 1500 + 50 * (tileCount - 64);
     if (tileCount >= 32) return 500 + 25 * (tileCount - 32);
