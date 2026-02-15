@@ -31,6 +31,8 @@ const Player = {
     this.alive = true;
     this.invincible = true;
     this.invincibilityTimer = 1500; // 1.5 seconds of invincibility
+    // Claim starting tile
+    Grid.set(this.col, this.row, TILE_GREEN);
   },
 
   update(dt) {

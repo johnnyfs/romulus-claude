@@ -37,14 +37,28 @@ const Encircle = {
     }
   },
 
-  // Draw flash overlays
+  // Draw flash overlays and encirclement indicators
   draw() {
+    // Flash effects
     for (const flash of this.flashTiles) {
       const x = flash.col * TILE_SIZE;
       const y = (flash.row + 1) * TILE_SIZE;
-      // Alternate white and transparent based on timer
       if (Math.floor(flash.timer / 50) % 2) {
         Renderer.fillRect(x, y, TILE_SIZE, TILE_SIZE, 'rgba(255, 255, 255, 0.5)');
+      }
+    }
+
+    // Show encirclement progress: small green/gray dots on each side of enemy
+    for (const enemy of Enemies.list) {
+      if (!enemy.alive) continue;
+      for (let d = 0; d < 4; d++) {
+        const nc = enemy.col + DIR_DX[d];
+        const nr = enemy.row + DIR_DY[d];
+        const isGreen = !Grid.inBounds(nc, nr) || Grid.get(nc, nr) === TILE_GREEN;
+        // Draw small indicator dot on the edge toward that neighbor
+        const ex = enemy.col * TILE_SIZE + 7 + DIR_DX[d] * 6;
+        const ey = (enemy.row + 1) * TILE_SIZE + 7 + DIR_DY[d] * 6;
+        Renderer.fillRect(ex, ey, 2, 2, isGreen ? PALETTE.GREEN : PALETTE.NEUTRAL);
       }
     }
   },
