@@ -4,6 +4,7 @@ const Waves = {
   targetPercent: 0.65,
   timer: 0,
   waveStartTime: 0,
+  waveElapsed: 0, // Accumulated elapsed time (pauses don't count)
   hurryUpPlayed: false,
   snailsSpawned: 0,
   zombieLevel: 0, // 0 = normal, 1 = after wave 5 (enemy tiles need 2 hops), 2 = after wave 15 (3 hops)
@@ -95,6 +96,7 @@ const Waves = {
       Bonuses.init();
     }
     this.waveStartTime = performance.now();
+    this.waveElapsed = 0;
     this.hurryUpPlayed = false;
     this.snailsSpawned = 0;
 
@@ -317,7 +319,8 @@ const Waves = {
 
   // Update wave timer and spawn snails
   update(dt) {
-    const elapsedTime = performance.now() - this.waveStartTime;
+    this.waveElapsed += dt; // Accumulate only when game is running (not paused)
+    const elapsedTime = this.waveElapsed;
 
     // Hurry up warning at 30 seconds
     if (elapsedTime >= 30000 && !this.hurryUpPlayed) {

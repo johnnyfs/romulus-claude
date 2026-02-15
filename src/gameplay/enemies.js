@@ -223,13 +223,15 @@ const Enemies = {
             // Ladybug resets tile to TILE_NEUTRAL
             Grid.set(enemy.col, enemy.row, TILE_NEUTRAL);
           } else if (enemy.tileState !== null) {
-            // Check if enemy landed in a fully green-enclosed area (e.g. blue teleport)
-            // If surrounded by green on all paths to edge, the enemy is captured
-            if (this._isEnclosedByGreen(enemy.col, enemy.row)) {
-              enemy.alive = false;
-              Player.addScore(this.getKillScore(enemy.type));
-              Audio.sfxCapture();
-              continue;
+            // Blue frog teleport: check if landed in fully green-enclosed area
+            if (enemy.justTeleported) {
+              enemy.justTeleported = false;
+              if (this._isEnclosedByGreen(enemy.col, enemy.row)) {
+                enemy.alive = false;
+                Player.addScore(this.getKillScore(enemy.type));
+                Audio.sfxCapture();
+                continue;
+              }
             }
             // -1 point when enemy reclaims a green tile
             if (Grid.get(enemy.col, enemy.row) === TILE_GREEN) {
@@ -260,6 +262,7 @@ const Enemies = {
             enemy.row = newRow;
             enemy.isHopping = true;
             enemy.hopTimer = HOP_DURATION;
+            enemy.justTeleported = true; // Flag for enclosed check on landing
             Audio.sfxEnemyHop();
             continue;
           }
