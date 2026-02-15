@@ -17,7 +17,6 @@ const Game = {
   start() {
     Player.lives = 3;
     Player.score = 0;
-    this.highScore = 0;
     Waves.init();
     this.state = STATE_PLAYING;
     Audio.startMusic();
