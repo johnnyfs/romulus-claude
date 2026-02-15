@@ -50,14 +50,25 @@ const Encircle = {
   },
 
   // Check if a position is fully encircled by green tiles
+  // An enemy is encircled when all 4 orthogonal neighbors are green.
+  // The tile the enemy is standing on does NOT need to be green (it's their color).
   isEncircled(col, row) {
-    // All 4 orthogonal neighbors must be green (or out of bounds counts as green)
+    let greenCount = 0;
+    let checkCount = 0;
     for (let d = 0; d < 4; d++) {
       const nc = col + DIR_DX[d];
       const nr = row + DIR_DY[d];
-      if (!Grid.inBounds(nc, nr)) continue; // edges count as encircled
-      if (Grid.get(nc, nr) !== TILE_GREEN) return false;
+      if (!Grid.inBounds(nc, nr)) {
+        // Wall/edge counts as encircled
+        greenCount++;
+        checkCount++;
+        continue;
+      }
+      checkCount++;
+      if (Grid.get(nc, nr) === TILE_GREEN) {
+        greenCount++;
+      }
     }
-    return true;
+    return greenCount === checkCount && checkCount > 0;
   },
 };
