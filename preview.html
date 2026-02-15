@@ -22,8 +22,7 @@
 </head>
 <body>
   <canvas id="game"></canvas>
-  <!-- Engine modules -->
-  <script>
+  <script>/* src/engine/constants.js */
 // Maripoga's Errand - Core Constants
 // NES resolution: 256x240
 const SCREEN_WIDTH = 256;
@@ -75,9 +74,8 @@ const CLEAR_SHOW_WAVE = 2;
 const HOP_DURATION = 200; // ms for hop animation
 const TARGET_FPS = 60;
 const FRAME_TIME = 1000 / TARGET_FPS;
-
-</script>
-  <script>
+  </script>
+  <script>/* src/engine/palette.js */
 // NES-inspired color palette
 // Subset of the NES 54-color palette, curated for Maripoga's Errand
 const PALETTE = {
@@ -131,7 +129,7 @@ const PALETTE = {
 
   // Water / Swamp background
   WATER_BG:    '#0a1520',
-  WATER_DAY:   '#3a7bc8',    // Match sky behind reeds for daytime water
+  WATER_DAY:   '#1a4060',    // Lighter/bluer water for daytime
   NEUTRAL_HI:  '#353545',
 
   // Decoration — reeds
@@ -190,9 +188,8 @@ const TILE_ACCENT_COLORS = {
   [TILE_BLUE]:    PALETTE.BLUE_MID,
   [TILE_SMART]:   PALETTE.SMART_MID,
 };
-
-</script>
-  <script>
+  </script>
+  <script>/* src/engine/input.js */
 // Input handling - keyboard state tracking
 const Input = {
   keys: {},
@@ -236,9 +233,8 @@ const Input = {
     return DIR_NONE;
   },
 };
-
-</script>
-  <script>
+  </script>
+  <script>/* src/engine/renderer.js */
 // Canvas renderer - handles drawing at NES resolution
 const Renderer = {
   canvas: null,
@@ -402,9 +398,8 @@ const Renderer = {
     }
   },
 };
-
-</script>
-  <script>
+  </script>
+  <script>/* src/engine/grid.js */
 // Grid state management - the 16x14 tile grid
 const Grid = {
   tiles: [],
@@ -486,10 +481,8 @@ const Grid = {
     }
   },
 };
-
-</script>
-  <!-- Art / Sprites -->
-  <script>
+  </script>
+  <script>/* src/art/sprites.js */
 // Sprite definitions - pixel art as 2D arrays of palette colors
 // Each sprite is 16x16, null = transparent
 // These are programmer-art placeholders; the Art agent will refine them.
@@ -1115,10 +1108,8 @@ const Sprites = {
     return this.speed_fly_1;
   },
 };
-
-</script>
-  <!-- Audio -->
-  <script>
+  </script>
+  <script>/* src/audio/audio.js */
 // Chiptune audio engine using Web Audio API
 // NES-like: pulse (square) waves, triangle, noise
 const Audio = {
@@ -1640,10 +1631,8 @@ const Audio = {
     this.playNote(2093, 0.55, 0.2, 'triangle', 0.08, 0.01, 0.08);
   },
 };
-
-</script>
-  <!-- Gameplay modules -->
-  <script>
+  </script>
+  <script>/* src/gameplay/decoration.js */
 // Scenic decoration for the game board - reed wall (top) and lily pad edge (bottom)
 // Row 0 = reed wall under HUD, Row 13 = lily pad border at bottom
 // Architect waves (every 10th) get cityscape + highway fence instead
@@ -1928,9 +1917,8 @@ const Decoration = {
     Renderer.fillRect(ox + 1, oy + 1, 1, 1, hi);
   },
 };
-
-</script>
-  <script>
+  </script>
+  <script>/* src/gameplay/player.js */
 // Player (Maripoga) - movement, hopping, tile claiming
 const Player = {
   col: 0,
@@ -2127,9 +2115,8 @@ const Player = {
     }
   },
 };
-
-</script>
-  <script>
+  </script>
+  <script>/* src/gameplay/enemies.js */
 // Enemy frog system - with snake, ladybug, smart frog, and smart deployment scheduling
 const Enemies = {
   list: [],
@@ -2646,9 +2633,8 @@ const Enemies = {
     this.list = this.list.filter(e => e.alive);
   },
 };
-
-</script>
-  <script>
+  </script>
+  <script>/* src/gameplay/bonuses.js */
 // Bonus items system - flies and green bug
 // Spawns collectible bonus items on the field periodically
 const Bonuses = {
@@ -3025,9 +3011,8 @@ const Bonuses = {
     Enemies.cleanup();
   },
 };
-
-</script>
-  <script>
+  </script>
+  <script>/* src/gameplay/encircle.js */
 // Encirclement detection - Qix/Amidar style flood-fill
 // Sequential animation pipeline: fill -> kills (one at a time) -> bonus -> clear
 // Also handles enemy (bad frog) encirclement detection (4A)
@@ -3274,11 +3259,12 @@ const Encircle = {
   },
 
   // Tiered fill score based on number of tiles cleared
+  // Max possible is 135 (walk down from center, encircle entire field)
   calculateFillScore(tileCount) {
-    // Special high-value encirclements (near-max board)
-    if (tileCount >= 126) return 5000;
-    if (tileCount >= 125) return 4000;
-    if (tileCount >= 124) return 3500;
+    // Perfect encirclement — extremely rare
+    if (tileCount >= 135) return 5000;
+    // Near-max: 124-134 = 3500 + 100 per tile over 124
+    if (tileCount >= 124) return 3500 + 100 * (tileCount - 124);
     // Tiered formula
     if (tileCount >= 64) return 1500 + 50 * (tileCount - 64);
     if (tileCount >= 32) return 500 + 25 * (tileCount - 32);
@@ -3413,9 +3399,8 @@ const Encircle = {
     }
   },
 };
-
-</script>
-  <script>
+  </script>
+  <script>/* src/gameplay/waves.js */
 // Wave system - escalating difficulty with structured progression
 const Waves = {
   current: 1,
@@ -3590,9 +3575,13 @@ const Waves = {
     }
   },
 
-  // Spawn zombie-only wave. Zombie count = wave / 5, capped at 6.
+  // Spawn zombie-only wave. W5=2 zombies, W15=4, then +1 per zombie wave after, cap 6.
   _spawnZombieWave(wave) {
-    const numZombies = Math.min(6, Math.ceil(wave / 5));
+    let numZombies;
+    if (wave <= 5) numZombies = 2;
+    else if (wave <= 15) numZombies = 4;
+    else numZombies = Math.min(6, 4 + Math.floor((wave - 15) / 10));
+
     const positions = [
       [2, 2],
       [GRID_COLS - 3, 2],
@@ -3792,9 +3781,8 @@ const Waves = {
     this.setupWave();
   },
 };
-
-</script>
-  <script>
+  </script>
+  <script>/* src/gameplay/hud.js */
 // HUD - score, lives, wave, fill percentage
 // All text on 8x8 grid, in the top HUD row (16px tall)
 const HUD = {
@@ -3847,10 +3835,8 @@ const HUD = {
     }
   },
 };
-
-</script>
-  <!-- Main game -->
-  <script>
+  </script>
+  <script>/* src/main.js */
 // Main game loop - ties everything together
 const Game = {
   state: STATE_TITLE,
@@ -4194,7 +4180,6 @@ const Game = {
 
 // Boot!
 Game.run();
-
-</script>
+  </script>
 </body>
 </html>
