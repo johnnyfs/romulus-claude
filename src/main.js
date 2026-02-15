@@ -40,6 +40,7 @@ const Game = {
         Player.update(dt);
         Enemies.update(dt);
         Encircle.update(dt);
+        Waves.update(dt);
         // Continuously check encirclement (not just on player hop)
         Encircle.checkAll();
 
