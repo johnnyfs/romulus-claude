@@ -1,30 +1,98 @@
-// Encirclement detection - the core capture mechanic
-// A frog is captured when all 4 orthogonal neighbors are TILE_GREEN
+// Encirclement detection - Qix/Amidar style flood-fill
+// When green tiles form a closed boundary, the enclosed region fills green.
+// Any enemies inside the filled region are captured.
 const Encircle = {
   flashTiles: [], // Array of {col, row, timer}
 
-  // Check all enemies for encirclement
+  // Check for enclosed regions and fill them
   checkAll() {
-    for (const enemy of Enemies.list) {
-      if (!enemy.alive) continue;
-      if (this.isEncircled(enemy.col, enemy.row)) {
-        // Add flash effect for converted tiles
-        this.addFlashEffect(enemy.tileState);
-        Enemies.capture(enemy);
+    // Strategy: flood-fill from every non-green tile.
+    // If a flood-fill region can reach the grid edge without crossing green,
+    // it's NOT enclosed. If it CAN'T reach the edge, it IS enclosed — fill it.
+    const visited = [];
+    for (let r = 0; r < GRID_ROWS; r++) {
+      visited[r] = [];
+      for (let c = 0; c < GRID_COLS; c++) {
+        visited[r][c] = false;
       }
     }
-    Enemies.cleanup();
-  },
 
-  // Add flash effect for all tiles of a given state that will be converted
-  addFlashEffect(tileState) {
+    // For each unvisited non-green tile, flood fill to find its region
     for (let r = 0; r < GRID_ROWS; r++) {
       for (let c = 0; c < GRID_COLS; c++) {
-        if (Grid.get(c, r) === tileState) {
-          this.flashTiles.push({ col: c, row: r, timer: 300 }); // 300ms flash
+        if (visited[r][c]) continue;
+        if (Grid.get(c, r) === TILE_GREEN) {
+          visited[r][c] = true;
+          continue;
+        }
+
+        // Flood fill from this tile — collect the region
+        const region = [];
+        let touchesEdge = false;
+        const stack = [{ col: c, row: r }];
+
+        while (stack.length > 0) {
+          const { col: cx, row: ry } = stack.pop();
+          if (cx < 0 || cx >= GRID_COLS || ry < 0 || ry >= GRID_ROWS) {
+            touchesEdge = true;
+            continue;
+          }
+          if (visited[ry][cx]) continue;
+          if (Grid.get(cx, ry) === TILE_GREEN) continue; // green is boundary
+
+          visited[ry][cx] = true;
+          region.push({ col: cx, row: ry });
+
+          // Check if on edge
+          if (cx === 0 || cx === GRID_COLS - 1 || ry === 0 || ry === GRID_ROWS - 1) {
+            touchesEdge = true;
+          }
+
+          // Expand to 4 neighbors
+          stack.push({ col: cx + 1, row: ry });
+          stack.push({ col: cx - 1, row: ry });
+          stack.push({ col: cx, row: ry + 1 });
+          stack.push({ col: cx, row: ry - 1 });
+        }
+
+        // If this region doesn't touch the edge, it's enclosed!
+        if (!touchesEdge && region.length > 0) {
+          this._fillRegion(region);
         }
       }
     }
+  },
+
+  // Fill an enclosed region with green and capture any enemies inside
+  _fillRegion(region) {
+    // Add flash effect for tiles being converted
+    for (const tile of region) {
+      if (Grid.get(tile.col, tile.row) !== TILE_GREEN) {
+        this.flashTiles.push({ col: tile.col, row: tile.row, timer: 400 });
+      }
+    }
+
+    // Fill all tiles in region to green
+    for (const tile of region) {
+      Grid.set(tile.col, tile.row, TILE_GREEN);
+    }
+
+    // Check if any enemies were inside this region
+    for (const enemy of Enemies.list) {
+      if (!enemy.alive) continue;
+      for (const tile of region) {
+        if (enemy.col === tile.col && enemy.row === tile.row) {
+          enemy.alive = false;
+          Player.addScore(100 + region.length * 5);
+          Audio.sfxCapture();
+          break;
+        }
+      }
+    }
+    Enemies.cleanup();
+
+    // Score for filling the region
+    Player.addScore(region.length * 2);
   },
 
   // Update flash timers
@@ -37,52 +105,14 @@ const Encircle = {
     }
   },
 
-  // Draw flash overlays and encirclement indicators
+  // Draw flash overlays
   draw() {
-    // Flash effects
     for (const flash of this.flashTiles) {
       const x = flash.col * TILE_SIZE;
       const y = (flash.row + 1) * TILE_SIZE;
-      if (Math.floor(flash.timer / 50) % 2) {
+      if (Math.floor(flash.timer / 60) % 2) {
         Renderer.fillRect(x, y, TILE_SIZE, TILE_SIZE, 'rgba(255, 255, 255, 0.5)');
       }
     }
-
-    // Show encirclement progress: small green/gray dots on each side of enemy
-    for (const enemy of Enemies.list) {
-      if (!enemy.alive) continue;
-      for (let d = 0; d < 4; d++) {
-        const nc = enemy.col + DIR_DX[d];
-        const nr = enemy.row + DIR_DY[d];
-        const isGreen = !Grid.inBounds(nc, nr) || Grid.get(nc, nr) === TILE_GREEN;
-        // Draw small indicator dot on the edge toward that neighbor
-        const ex = enemy.col * TILE_SIZE + 7 + DIR_DX[d] * 6;
-        const ey = (enemy.row + 1) * TILE_SIZE + 7 + DIR_DY[d] * 6;
-        Renderer.fillRect(ex, ey, 2, 2, isGreen ? PALETTE.GREEN : PALETTE.NEUTRAL);
-      }
-    }
-  },
-
-  // Check if a position is fully encircled by green tiles
-  // An enemy is encircled when all 4 orthogonal neighbors are green.
-  // The tile the enemy is standing on does NOT need to be green (it's their color).
-  isEncircled(col, row) {
-    let greenCount = 0;
-    let checkCount = 0;
-    for (let d = 0; d < 4; d++) {
-      const nc = col + DIR_DX[d];
-      const nr = row + DIR_DY[d];
-      if (!Grid.inBounds(nc, nr)) {
-        // Wall/edge counts as encircled
-        greenCount++;
-        checkCount++;
-        continue;
-      }
-      checkCount++;
-      if (Grid.get(nc, nr) === TILE_GREEN) {
-        greenCount++;
-      }
-    }
-    return greenCount === checkCount && checkCount > 0;
   },
 };
