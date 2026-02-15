@@ -73,9 +73,11 @@ const Player = {
       const newRow = this.row + DIR_DY[dir];
       if (Grid.inBounds(newCol, newRow)) {
         const tile = Grid.get(newCol, newRow);
-        // Can't hop onto spike/water, and can't claim gray tiles directly (zombie tiles)
-        // Gray tiles can only be turned green via encirclement
-        const isZombieTile = tile === TILE_NEUTRAL && Grid.get(this.col, this.row) !== TILE_NEUTRAL;
+        // Can't hop onto spike/water
+        // Zombie tiles (TILE_NEUTRAL placed by zombie frogs) block hopping only
+        // if a zombie is actually in the game — otherwise neutral tiles are normal
+        const hasZombies = Enemies.list.some(e => e.type === 'zombie' && e.alive);
+        const isZombieTile = hasZombies && tile === TILE_NEUTRAL && Grid.get(this.col, this.row) !== TILE_NEUTRAL;
         if (tile !== TILE_SPIKE && tile !== TILE_WATER && !isZombieTile) {
           this.hopFromCol = this.col;
           this.hopFromRow = this.row;
