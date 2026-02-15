@@ -46,7 +46,8 @@ const Renderer = {
   },
 
   clear() {
-    this.ctx.fillStyle = PALETTE.DARK_BG;
+    // Water/swamp background — dark water between pad-shaped tiles
+    this.ctx.fillStyle = PALETTE.WATER_BG;
     this.ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
   },
 
@@ -56,12 +57,51 @@ const Renderer = {
     this.ctx.fillRect(Math.floor(x), Math.floor(y), w, h);
   },
 
-  // Draw a single tile at grid position — solid color, authentic NES style
+  // Pad-shaped tile: 15x14, rounded top with 4px notch, steep 2-4 taper at bottom
+  // Square-lily-pad hybrid — like a square and a lily pad had a baby
+  padTileShape: [
+    // row 0: rounded corners 2px + 4px notch centered (cols 6-9 = 0)
+    [0,0,1,1,1,1,0,0,0,0,1,1,1,0,0],
+    // row 1: 1px corners
+    [0,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+    // rows 2-11: full width
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    // row 12: 2px taper
+    [0,0,1,1,1,1,1,1,1,1,1,1,1,0,0],
+    // row 13: 4px taper
+    [0,0,0,0,1,1,1,1,1,1,1,0,0,0,0],
+  ],
+
+  // Draw a single tile at grid position using pad shape
   drawTile(col, row, color) {
-    const x = col * TILE_SIZE;
-    const y = (row + 1) * TILE_SIZE; // +1 to skip HUD row
+    const baseX = col * TILE_SIZE;
+    const baseY = (row + 1) * TILE_SIZE; // +1 to skip HUD row
+    const shape = this.padTileShape;
+    const pw = 15, ph = 14;
+    const ox = baseX + Math.floor((TILE_SIZE - pw) / 2); // center 15 in 16 = offset 0
+    const oy = baseY + Math.floor((TILE_SIZE - ph) / 2); // center 14 in 16 = offset 1
     this.ctx.fillStyle = color;
-    this.ctx.fillRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+    for (let r = 0; r < ph; r++) {
+      // Draw contiguous runs for efficiency
+      let startC = -1;
+      for (let c = 0; c <= pw; c++) {
+        if (c < pw && shape[r][c]) {
+          if (startC < 0) startC = c;
+        } else if (startC >= 0) {
+          this.ctx.fillRect(ox + startC, oy + r, c - startC, 1);
+          startC = -1;
+        }
+      }
+    }
   },
 
   // Blocky 8x8 NES-style arcade font (7 rows used, chars on 8px grid)

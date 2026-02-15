@@ -136,8 +136,8 @@ const Game = {
 
       case STATE_PLAYING:
       case STATE_PAUSED:
-        Decoration.draw();
         Grid.draw();
+        Decoration.draw();
         Enemies.draw();
         Player.draw();
         Encircle.draw();
@@ -149,8 +149,8 @@ const Game = {
         break;
 
       case STATE_WAVE_CLEAR:
-        Decoration.draw();
         Grid.draw();
+        Decoration.draw();
         Enemies.draw(); // Show enemies during phase 1
         Player.draw();
         Encircle.draw();
@@ -181,8 +181,8 @@ const Game = {
         break;
 
       case STATE_DYING:
-        Decoration.draw();
         Grid.draw();
+        Decoration.draw();
         Enemies.draw();
         HUD.draw();
         const deathPos = Player.getPixelPos();

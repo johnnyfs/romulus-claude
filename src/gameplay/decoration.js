@@ -1,85 +1,167 @@
-// Scenic decoration for the game board - lily pads and reeds
+// Scenic decoration for the game board - reed wall (top) and lily pad edge (bottom)
+// Row 0 = reed wall under HUD, Row 13 = lily pad border at bottom
 const Decoration = {
-  lilyPads: [],
   reeds: [],
+  lilyPads: [],
 
   init() {
-    // Define lily pad positions along the bottom edge
-    // Bottom row of grid is row 13, starts at y = 14 * 16 = 224
-    // Lily pads are ~12x8 pixels, placed behind tiles
-    this.lilyPads = [
-      { x: 20, y: 228 },   // Bottom left area
-      { x: 72, y: 230 },   // Left-center
-      { x: 140, y: 229 },  // Right-center
-      { x: 210, y: 227 },  // Bottom right area
-    ];
-
-    // Define reed positions along the top edge, below HUD
-    // HUD is 16px tall, so reeds start around y = 16-18
-    // Reeds are thin vertical lines, 1-2px wide, 8-12px tall
-    this.reeds = [
-      { x: 24, y: 17, height: 10 },
-      { x: 56, y: 19, height: 8 },
-      { x: 88, y: 16, height: 12 },
-      { x: 128, y: 18, height: 9 },
-      { x: 168, y: 17, height: 11 },
-      { x: 200, y: 19, height: 8 },
-      { x: 232, y: 16, height: 10 },
-    ];
+    this._generateReeds();
+    this._generateLilyPads();
   },
 
-  draw() {
-    // Draw water hint in the background (bottom 2 rows)
-    // Bottom 2 rows: y = 208 to 240 (rows 12-13, but drawn as pixel bg)
-    Renderer.fillRect(0, 208, SCREEN_WIDTH, 32, PALETTE.WATER_DARK);
+  // Generate reed data — slightly less dense, brown+green, varied heights, some angled
+  // Approved: v4 Option C — spacing ~3-4px, 2px water strip at bottom
+  _generateReeds() {
+    this.reeds = [];
+    let seed = 42;
+    const rand = () => { seed = (seed * 16807) % 2147483647; return (seed & 0x7fffffff) / 2147483647; };
 
-    // Draw lily pads
-    for (const pad of this.lilyPads) {
-      this._drawLilyPad(pad.x, pad.y);
+    let x = 1;
+    while (x < 255) {
+      const h = 6 + Math.floor(rand() * 9); // 6-14px tall
+      const isBrown = rand() < 0.4; // 40% brown, 60% green
+      let angle = 0;
+      const aRoll = rand();
+      if (aRoll < 0.15) angle = -1;
+      else if (aRoll < 0.30) angle = 1;
+
+      this.reeds.push({ x, h, isBrown, angle });
+
+      // Spacing: 3 + 0-1 jitter
+      x += 3 + Math.floor(rand() * 2);
     }
+  },
 
-    // Draw reeds
+  // Generate lily pad layout — repeating 32px pattern: 1 sheared heart + 2 small ovals
+  // Approved: v5 Option A — sheared hearts + normal ovals, diagonal layout
+  _generateLilyPads() {
+    this.lilyPads = [];
+    for (let u = 0; u < 8; u++) {
+      const bx = u * 32;
+      const isEven = u % 2 === 0;
+
+      // Sheared heart in left tile
+      this.lilyPads.push({
+        type: 'heart',
+        x: bx + 2,
+        y: 224 + 4 + (isEven ? -1 : 1),
+      });
+
+      // Upper-left oval in right tile
+      this.lilyPads.push({
+        type: 'oval',
+        x: bx + 16 + 2,
+        y: 224 + 1 + (isEven ? 0 : 1),
+      });
+
+      // Lower-right oval — nudged up 1px on even patterns
+      this.lilyPads.push({
+        type: 'oval',
+        x: bx + 16 + 8,
+        y: 224 + 9 + (isEven ? -1 : 0),
+      });
+    }
+  },
+
+  // Draw reeds (behind game tiles, in row 0 area)
+  drawReeds() {
+    // Dark background for reed row
+    Renderer.fillRect(0, 16, SCREEN_WIDTH, 14, '#080b12');
+
+    // 2px water strip at bottom of reed row (y=30-31)
+    Renderer.fillRect(0, 30, SCREEN_WIDTH, 2, PALETTE.WATER_BG);
+
+    // Draw each reed — base at y=29 (above water strip), grows upward
     for (const reed of this.reeds) {
-      this._drawReed(reed.x, reed.y, reed.height);
+      this._drawReed(reed.x, 29, reed.h, reed.isBrown, reed.angle);
     }
   },
 
-  _drawLilyPad(x, y) {
-    // Draw a simple lily pad: dark green oval with notch
-    // 12x8 pixel oval with a small triangular notch
-    const color = PALETTE.GREEN_DARK;
-    const highlight = PALETTE.GREEN_MID;
-
-    // Oval shape (simplified pixel art)
-    // Row by row drawing for oval effect
-    Renderer.fillRect(x + 3, y, 6, 1, color);     // top (narrow)
-    Renderer.fillRect(x + 2, y + 1, 8, 1, color); // wider
-    Renderer.fillRect(x + 1, y + 2, 10, 1, color); // widest
-    Renderer.fillRect(x + 1, y + 3, 10, 1, color); // widest
-    Renderer.fillRect(x + 1, y + 4, 10, 1, color); // widest
-    Renderer.fillRect(x + 2, y + 5, 8, 1, color); // narrower
-    Renderer.fillRect(x + 3, y + 6, 6, 1, color); // bottom (narrow)
-
-    // Add notch (small triangular cut on right side)
-    Renderer.fillRect(x + 10, y + 3, 1, 1, PALETTE.WATER_DARK);
-    Renderer.fillRect(x + 10, y + 4, 1, 1, PALETTE.WATER_DARK);
-
-    // Add subtle highlight on left edge for dimension
-    Renderer.fillRect(x + 2, y + 2, 1, 1, highlight);
-    Renderer.fillRect(x + 1, y + 3, 1, 1, highlight);
+  // Draw lily pad edge (row 13, below game tiles)
+  drawLilyPads() {
+    for (const pad of this.lilyPads) {
+      if (pad.type === 'heart') {
+        this._drawShearedHeart(pad.x, pad.y);
+      } else {
+        this._drawSmallOval(pad.x, pad.y);
+      }
+    }
   },
 
-  _drawReed(x, y, height) {
-    // Draw a thin reed: 1-2px wide vertical line with oval tip
-    const stemColor = '#1a3d2e';  // dark green-brown
-    const tipColor = '#4a2810';   // dark brown
+  // Full draw call (both layers)
+  draw() {
+    this.drawReeds();
+    this.drawLilyPads();
+  },
 
-    // Stem (thin vertical line, 1px wide)
-    Renderer.fillRect(x, y, 1, height - 3, stemColor);
+  // Draw a single reed stem, growing upward from baseY
+  _drawReed(baseX, baseY, height, isBrown, angle) {
+    const color = isBrown ? PALETTE.REED_BROWN : PALETTE.REED_GREEN;
+    const topY = baseY - height + 1;
 
-    // Cattail tip (small oval, 2-3px tall)
-    Renderer.fillRect(x - 1, y, 3, 1, tipColor);
-    Renderer.fillRect(x - 1, y + 1, 3, 1, tipColor);
-    Renderer.fillRect(x, y + 2, 1, 1, tipColor);
+    for (let i = 0; i < height; i++) {
+      let xOff = 0;
+      if (angle !== 0) {
+        xOff = Math.floor(i / 4) * angle;
+      }
+      Renderer.fillRect(baseX + xOff, topY + i, 1, 1, color);
+    }
+  },
+
+  // Sheared heart lily pad (12x7) — top shifts left 1, bottom rows shift right 1-2
+  // Per-row x offsets for shear effect (false perspective)
+  _heartShearOffsets: [-1, 0, 0, 0, 0, 1, 2],
+  _heartShape: [
+    [0,0,0,1,1,0,0,1,1,0,0,0],
+    [0,0,1,1,1,1,1,1,1,1,0,0],
+    [0,1,1,1,1,1,1,1,1,1,1,0],
+    [0,1,1,1,1,1,1,1,1,1,1,0],
+    [0,1,1,1,1,1,1,1,1,1,1,0],
+    [0,0,1,1,1,1,1,1,1,1,0,0],
+    [0,0,0,0,1,1,1,1,0,0,0,0],
+  ],
+
+  _drawShearedHeart(ox, oy) {
+    const shape = this._heartShape;
+    const offsets = this._heartShearOffsets;
+    const color = PALETTE.GREEN_DARK;
+    const hi = PALETTE.GREEN_MID;
+
+    for (let r = 0; r < shape.length; r++) {
+      const xo = offsets[r];
+      for (let c = 0; c < shape[r].length; c++) {
+        if (shape[r][c]) {
+          Renderer.fillRect(ox + c + xo, oy + r, 1, 1, color);
+        }
+      }
+    }
+    // Highlight on left edge
+    Renderer.fillRect(ox + 2 + offsets[1], oy + 1, 1, 1, hi);
+    Renderer.fillRect(ox + 1 + offsets[2], oy + 2, 1, 1, hi);
+    Renderer.fillRect(ox + 1 + offsets[3], oy + 3, 1, 1, hi);
+  },
+
+  // Small oval lily pad (6x4)
+  _ovalShape: [
+    [0,1,1,1,1,0],
+    [1,1,1,1,1,1],
+    [1,1,1,1,1,1],
+    [0,1,1,1,1,0],
+  ],
+
+  _drawSmallOval(ox, oy) {
+    const shape = this._ovalShape;
+    const color = PALETTE.GREEN_DARK;
+    const hi = PALETTE.GREEN_MID;
+
+    for (let r = 0; r < shape.length; r++) {
+      for (let c = 0; c < shape[r].length; c++) {
+        if (shape[r][c]) {
+          Renderer.fillRect(ox + c, oy + r, 1, 1, color);
+        }
+      }
+    }
+    // Highlight
+    Renderer.fillRect(ox + 1, oy + 1, 1, 1, hi);
   },
 };
