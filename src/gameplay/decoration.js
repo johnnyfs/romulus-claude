@@ -65,11 +65,26 @@ const Decoration = {
 
   // Draw reeds (behind game tiles, in row 0 area)
   drawReeds() {
-    // Dark background for reed row
-    Renderer.fillRect(0, 16, SCREEN_WIDTH, 14, '#080b12');
+    // Dynamic sky background for reed row (blue daytime, dark nighttime)
+    const reedBg = Waves.skyDarkColor || '#080b12';
+    Renderer.fillRect(0, 16, SCREEN_WIDTH, 14, reedBg);
 
-    // 2px water strip at bottom of reed row (y=30-31)
-    Renderer.fillRect(0, 30, SCREEN_WIDTH, 2, PALETTE.WATER_BG);
+    // 2px water strip at bottom of reed row (y=30-31) — lighter blue in daytime
+    const waterBg = Waves.waterColor || PALETTE.WATER_BG;
+    Renderer.fillRect(0, 30, SCREEN_WIDTH, 2, waterBg);
+
+    // Draw twinkling stars in reed area during nighttime (behind reeds)
+    if (Waves.isNighttime && Waves.stars.length > 0) {
+      const now = performance.now();
+      for (const star of Waves.stars) {
+        // Stars in reed area only (y 16-29)
+        if (star.y >= 16 && star.y < 30) {
+          if (!star.twinkle || Math.floor(now / 500) % 2 === 0) {
+            Renderer.fillRect(star.x, star.y, 1, 1, PALETTE.WHITE);
+          }
+        }
+      }
+    }
 
     // Draw each reed — base at y=29 (above water strip), grows upward
     for (const reed of this.reeds) {

@@ -2,8 +2,23 @@
 // All text on 8x8 grid, in the top HUD row (16px tall)
 const HUD = {
   draw() {
-    // Background bar
-    Renderer.fillRect(0, 0, SCREEN_WIDTH, HUD_HEIGHT, PALETTE.HUD_BG);
+    // Background bar — use dynamic sky color (blue daytime, dark nighttime)
+    const bgColor = Waves.skyColor || PALETTE.HUD_BG;
+    Renderer.fillRect(0, 0, SCREEN_WIDTH, HUD_HEIGHT, bgColor);
+
+    // Draw twinkling stars during nighttime (behind HUD text)
+    if (Waves.isNighttime && Waves.stars.length > 0) {
+      const now = performance.now();
+      for (const star of Waves.stars) {
+        // Stars in HUD area only (y < 16)
+        if (star.y < 16) {
+          // Twinkle: toggle visibility every ~500ms
+          if (!star.twinkle || Math.floor(now / 500) % 2 === 0) {
+            Renderer.fillRect(star.x, star.y, 1, 1, PALETTE.WHITE);
+          }
+        }
+      }
+    }
 
     // Score (left) — snap to 8px grid: x=0, y=4
     Renderer.drawText(String(Player.score).padStart(7, '0'), 0, 4, PALETTE.SCORE_COLOR);

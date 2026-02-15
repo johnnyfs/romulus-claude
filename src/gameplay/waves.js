@@ -7,9 +7,36 @@ const Waves = {
   hurryUpPlayed: false,
   snailsSpawned: 0,
 
+  // Sky/atmosphere state (day/night cycle)
+  isNighttime: false,
+  skyColor: null,       // Set in setupWave; fallback via || in draw code
+  skyDarkColor: null,
+  waterColor: null,
+
+  // Nighttime stars (generated once per night wave)
+  stars: [],
+  _starSeed: 0,
+
   init() {
     this.current = 1;
     this.setupWave();
+  },
+
+  // Generate random star positions for nighttime sky
+  _generateStars() {
+    this.stars = [];
+    // Deterministic PRNG so stars are stable within a wave
+    let seed = this.current * 7919 + 31;
+    const rand = () => { seed = (seed * 16807) % 2147483647; return (seed & 0x7fffffff) / 2147483647; };
+
+    const numStars = 6 + Math.floor(rand() * 4); // 6-9 stars
+    for (let i = 0; i < numStars; i++) {
+      this.stars.push({
+        x: 2 + Math.floor(rand() * 252),   // Across full HUD width
+        y: 1 + Math.floor(rand() * 28),     // y 1-28 (HUD + reed area, avoid edges)
+        twinkle: rand() < 0.4,              // 40% of stars twinkle
+      });
+    }
   },
 
   // Check if a position is safe for enemy spawn (not on or adjacent to player start)
@@ -53,6 +80,19 @@ const Waves = {
     // 15+: escalating mix with periodic zombie waves every 5th wave
 
     const isZombieWave = (wave === 11 || wave === 14 || (wave > 14 && (wave - 14) % 5 === 0));
+
+    // Set sky atmosphere — daytime for normal waves, nighttime for zombie waves
+    this.isNighttime = isZombieWave;
+    this.skyColor = isZombieWave ? PALETTE.SKY_NIGHT : PALETTE.SKY_DAY;
+    this.skyDarkColor = isZombieWave ? PALETTE.SKY_NIGHT_DARK : PALETTE.SKY_DAY_DARK;
+    this.waterColor = isZombieWave ? PALETTE.WATER_BG : PALETTE.WATER_DAY;
+
+    // Generate stars for nighttime
+    if (isZombieWave) {
+      this._generateStars();
+    } else {
+      this.stars = [];
+    }
 
     if (isZombieWave) {
       // Special zombie-only wave!

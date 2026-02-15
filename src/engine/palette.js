@@ -43,8 +43,15 @@ const PALETTE = {
   HUD_TEXT:    '#d0d0d0',
   SCORE_COLOR: '#4ade80',
 
+  // Sky colors (day/night cycle)
+  SKY_DAY:       '#4a90d9',  // Medium sky blue - HUD background daytime
+  SKY_DAY_DARK:  '#3a7bc8',  // Slightly darker sky - reed area daytime
+  SKY_NIGHT:     '#0a0a15',  // Near-black with slight blue - HUD nighttime
+  SKY_NIGHT_DARK:'#080b12',  // Dark - reed area nighttime
+
   // Water / Swamp background
   WATER_BG:    '#0a1520',
+  WATER_DAY:   '#1a4060',    // Lighter/bluer water for daytime
   NEUTRAL_HI:  '#353545',
 
   // Decoration — reeds
