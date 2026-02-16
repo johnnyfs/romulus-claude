@@ -61,23 +61,42 @@ const Encircle = {
     }
     this.lastFillTime = now;
 
-    // Find enemies in region (excluding zombies, snails)
-    // Hopping enemies: check both destination AND origin tile
+    // Find enemies in the enclosed region (excluding zombies, snails).
+    // Build a fast lookup set of region tiles, PLUS any green tiles that are
+    // fully enclosed (an enemy on a green tile inside the ring should still die).
+    const regionSet = new Set();
+    for (const tile of region) {
+      regionSet.add(tile.row * GRID_COLS + tile.col);
+    }
+    // Also add enclosed green tiles: any green tile where all 4 neighbors are
+    // either in the region or also green-and-enclosed. Simpler: for each enemy,
+    // check if their position can reach the grid edge without crossing green.
     const enemies = [];
     for (const enemy of Enemies.list) {
       if (!enemy.alive) continue;
       if (enemy.type === 'zombie') continue;   // Zombies survive encirclement
       if (enemy.type === 'snail') continue;     // Snails excluded
+
+      // Check both destination and origin positions
+      const positions = [{ c: enemy.col, r: enemy.row }];
+      if (enemy.isHopping) {
+        positions.push({ c: enemy.hopFromCol, r: enemy.hopFromRow });
+      }
+
       let inRegion = false;
-      for (const tile of region) {
-        if (enemy.col === tile.col && enemy.row === tile.row) {
+      for (const pos of positions) {
+        // Fast path: position is directly in the non-green region
+        if (regionSet.has(pos.r * GRID_COLS + pos.c)) {
           inRegion = true;
           break;
         }
-        // Also check origin position if mid-hop
-        if (enemy.isHopping && enemy.hopFromCol === tile.col && enemy.hopFromRow === tile.row) {
-          inRegion = true;
-          break;
+        // Slow path: position might be on a green tile inside the enclosure.
+        // Check if this position is enclosed by green (can't reach edge).
+        if (Grid.get(pos.c, pos.r) === TILE_GREEN && regionSet.size > 0) {
+          if (this._isEnclosedByGreen(pos.c, pos.r)) {
+            inRegion = true;
+            break;
+          }
         }
       }
       if (inRegion) {
@@ -335,6 +354,40 @@ const Encircle = {
       }
     }
     return false;
+  },
+
+  // Check if a position is fully enclosed by green tiles (can't reach edge).
+  // Works even if the starting position itself is green — checks neighbors.
+  _isEnclosedByGreen(col, row) {
+    // If on the edge of the grid, not enclosed
+    if (col === 0 || col === GRID_COLS - 1 || row === 0 || row === GRID_ROWS - 1) return false;
+    // Check all 4 neighbors — if any non-green neighbor can reach the edge, not enclosed
+    const visited = [];
+    for (let r = 0; r < GRID_ROWS; r++) {
+      visited[r] = [];
+      for (let c = 0; c < GRID_COLS; c++) visited[r][c] = false;
+    }
+    // Mark starting position as visited so flood doesn't revisit it
+    visited[row][col] = true;
+    // Flood from each non-green neighbor
+    for (let d = 0; d < 4; d++) {
+      const nc = col + DIR_DX[d];
+      const nr = row + DIR_DY[d];
+      if (nc < 0 || nc >= GRID_COLS || nr < 0 || nr >= GRID_ROWS) return false;
+      if (Grid.get(nc, nr) === TILE_GREEN) continue; // Green neighbor = boundary
+      if (visited[nr][nc]) continue;
+      // Flood fill from this non-green neighbor
+      const stack = [{ c: nc, r: nr }];
+      while (stack.length > 0) {
+        const { c, r } = stack.pop();
+        if (c < 0 || c >= GRID_COLS || r < 0 || r >= GRID_ROWS) return false; // Reached edge
+        if (visited[r][c]) continue;
+        if (Grid.get(c, r) === TILE_GREEN) continue;
+        visited[r][c] = true;
+        stack.push({ c: c+1, r }, { c: c-1, r }, { c, r: r+1 }, { c, r: r-1 });
+      }
+    }
+    return true; // All non-green neighbors are enclosed
   },
 
   _showFillBonus(p) {
