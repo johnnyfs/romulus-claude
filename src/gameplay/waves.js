@@ -220,6 +220,7 @@ const Waves = {
 
   // Spawn enemies for a normal (non-zombie) wave.
   // Enemies enter from edges after a delay — never present at wave start.
+  // Ladybugs are handled separately via the respawn system.
   _spawnWaveEnemies(wave) {
     const config = this._waveTable[wave] || this._generateWaveConfig(wave);
     const enemyList = [];
@@ -231,18 +232,26 @@ const Waves = {
       }
     }
 
-    // Queue all enemies for delayed edge deployment
-    for (let i = 0; i < enemyList.length; i++) {
+    // Handle ladybug separately via respawn system
+    const hasLadybug = config.ladybug && config.ladybug > 0;
+    const filteredList = enemyList.filter(type => type !== 'ladybug');
+
+    // Queue non-ladybug enemies for delayed edge deployment
+    for (let i = 0; i < filteredList.length; i++) {
       const edge = Math.floor(Math.random() * 4);
       let col, row;
       if (edge === 0) { col = Math.floor(Math.random() * GRID_COLS); row = 0; }
       else if (edge === 1) { col = GRID_COLS - 1; row = Math.floor(Math.random() * GRID_ROWS); }
       else if (edge === 2) { col = Math.floor(Math.random() * GRID_COLS); row = GRID_ROWS - 1; }
       else { col = 0; row = Math.floor(Math.random() * GRID_ROWS); }
-      Enemies.queueEnemy(enemyList[i], col, row);
+      Enemies.queueEnemy(filteredList[i], col, row);
     }
     // Start smart deployment: frogs on 5s interval, non-frogs interleaved between
     Enemies.startDeployment();
+
+    if (hasLadybug) {
+      Enemies.enableLadybug();
+    }
   },
 
   // Generate wave config for waves beyond the explicit table (15+).
