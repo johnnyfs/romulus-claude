@@ -87,20 +87,20 @@ const PALETTE = {
   CYAN:        '#00e5ff',
   CYAN_DARK:   '#007c8a',
 
-  // Swamp Dusk (orange/amber sunset tones)
-  SWAMP_DUSK_SKY:      '#c85a30',
-  SWAMP_DUSK_SKY_DARK: '#8a3a1a',
-  SWAMP_DUSK_WATER:    '#2a3040',
+  // Swamp Dusk (darker blue sky, not quite night)
+  SWAMP_DUSK_SKY:      '#2a4a6a',
+  SWAMP_DUSK_SKY_DARK: '#1a3050',
+  SWAMP_DUSK_WATER:    '#102030',
 
   // City Daytime (blue sky over city)
   CITY_DAY_SKY:        '#5a9ad9',
   CITY_DAY_SKY_DARK:   '#4a80b8',
   CITY_DAY_WATER:      '#1a3050',
 
-  // City Dusk (existing purple — give it proper names)
-  CITY_DUSK_SKY:       '#2a1a3a',
-  CITY_DUSK_SKY_DARK:  '#2a1a3a',
-  CITY_DUSK_WATER:     '#1a1a2a',
+  // City Dusk (darker sky, not quite night)
+  CITY_DUSK_SKY:       '#1a2a40',
+  CITY_DUSK_SKY_DARK:  '#101e30',
+  CITY_DUSK_WATER:     '#0e1520',
 
   // City Night
   CITY_NIGHT_SKY:      '#0a0a15',
