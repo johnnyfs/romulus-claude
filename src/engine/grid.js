@@ -1,13 +1,18 @@
 // Grid state management - the 16x14 tile grid
 const Grid = {
   tiles: [],
+  fatalTimers: [],
+  fatalDuration: 0, // Set by waves.js each wave
 
   init() {
     this.tiles = [];
+    this.fatalTimers = [];
     for (let r = 0; r < GRID_ROWS; r++) {
       this.tiles[r] = [];
+      this.fatalTimers[r] = [];
       for (let c = 0; c < GRID_COLS; c++) {
         this.tiles[r][c] = TILE_NEUTRAL;
+        this.fatalTimers[r][c] = 0;
       }
     }
   },
@@ -27,6 +32,29 @@ const Grid = {
   // Check if position is valid
   inBounds(col, row) {
     return col >= 0 && col < GRID_COLS && row >= 0 && row < GRID_ROWS;
+  },
+
+  // Set a tile as fatal with a countdown
+  setFatal(col, row, duration) {
+    if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return;
+    this.fatalTimers[row][col] = duration;
+  },
+
+  // Check if a tile is currently fatal
+  isFatal(col, row) {
+    if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return false;
+    return this.fatalTimers[row][col] > 0;
+  },
+
+  // Tick all fatal timers
+  updateFatalTimers(dt) {
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        if (this.fatalTimers[r][c] > 0) {
+          this.fatalTimers[r][c] = Math.max(0, this.fatalTimers[r][c] - dt);
+        }
+      }
+    }
   },
 
   // Count tiles of a specific state
@@ -65,11 +93,25 @@ const Grid = {
     for (let r = 0; r < GRID_ROWS; r++) {
       for (let c = 0; c < GRID_COLS; c++) {
         const state = this.tiles[r][c];
-        const color = TILE_COLORS[state] || PALETTE.NEUTRAL;
+        let color = TILE_COLORS[state] || PALETTE.NEUTRAL;
+
+        // Fatal tile rendering
+        const fatalTime = this.fatalTimers[r][c];
+        if (fatalTime > 0 && TILE_FATAL_COLORS[state]) {
+          if (fatalTime > TILE_FATAL_FLICKER_DURATION) {
+            // Solid bright color
+            color = TILE_FATAL_COLORS[state];
+          } else {
+            // Flickering phase: alternate every 50ms
+            const flickerOn = Math.floor(fatalTime / 50) % 2 === 0;
+            color = flickerOn ? TILE_FATAL_COLORS[state] : (TILE_COLORS[state] || PALETTE.NEUTRAL);
+          }
+        }
+
         Renderer.drawTile(c, r, color);
 
-        // Draw accent border on claimed tiles
-        if (state !== TILE_NEUTRAL && TILE_ACCENT_COLORS[state]) {
+        // Draw accent border on claimed tiles (only if not fatal — fatal tiles use full bright color)
+        if (state !== TILE_NEUTRAL && TILE_ACCENT_COLORS[state] && fatalTime <= 0) {
           const x = c * TILE_SIZE;
           const y = (r + GRID_OFFSET_Y) * TILE_SIZE;
           Renderer.fillRect(x + 1, y + 1, TILE_SIZE - 2, 1, TILE_ACCENT_COLORS[state]);

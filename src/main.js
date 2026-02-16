@@ -91,6 +91,7 @@ const Game = {
 
         Player.update(dt);
         Enemies.update(dt);
+        Grid.updateFatalTimers(dt);
         Bonuses.update(dt);
         if (!Encircle.isAnimating()) {
           Encircle.update(dt);

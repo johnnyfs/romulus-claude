@@ -171,6 +171,17 @@ const Waves = {
     else if (wave > 10) this.zombieLevel = 1;
     else this.zombieLevel = 0;
 
+    // Calculate fatal tile duration for zombieLevel 2
+    // "last two tiles a standard red frog leaves behind" = 2 * red frog's moveInterval
+    if (this.zombieLevel >= 2) {
+      const redBaseInterval = 800;
+      const speedReduction = wave > 5 ? (wave - 5) * 20 : 0;
+      const redInterval = Math.max(250, redBaseInterval - speedReduction);
+      Grid.fatalDuration = redInterval * 2;
+    } else {
+      Grid.fatalDuration = 0;
+    }
+
     // Generate stars for nighttime waves
     if (this.isNighttime) {
       this._generateStars();
