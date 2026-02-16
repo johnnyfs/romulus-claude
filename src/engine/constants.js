@@ -20,7 +20,7 @@ const TILE_WATER = 6;   // Hazard
 const TILE_SNAIL = 7;   // Snail entity
 const TILE_ZOMBIE = 8;  // Zombie frog (though they use TILE_NEUTRAL for their tiles)
 const TILE_SMART = 9;   // Smart frog
-const TILE_HALFCLEAR = 10; // Half-cleared enemy tile (zombie evolution mechanic)
+const TILE_FATAL_FLICKER_DURATION = 300; // Last 300ms of fatal period = flickering
 
 // Directions
 const DIR_NONE = -1;

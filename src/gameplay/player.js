@@ -51,9 +51,25 @@ const Player = {
       this.hopTimer -= dt;
       if (this.hopTimer <= 0) {
         this.isHopping = false;
-        // Check if landed on spike
+        // Check if landed on fatal enemy tile
         const landedTile = Grid.get(this.col, this.row);
         const isPowered = (typeof Bonuses !== 'undefined') && Bonuses.invincibilityBoost;
+        if (Grid.isFatal(this.col, this.row)) {
+          const isEnemyTile = [TILE_RED, TILE_PURPLE, TILE_BLUE, TILE_SMART].includes(landedTile);
+          if (isEnemyTile) {
+            if (isPowered) {
+              // Powered player survives fatal tiles and converts to green
+              Grid.set(this.col, this.row, TILE_GREEN);
+              Grid.fatalTimers[this.row][this.col] = 0; // Clear fatal
+              Audio.sfxClaim(true);
+              Encircle.checkAll();
+            } else {
+              this.die();
+              return;
+            }
+          }
+        }
+        // Check if landed on spike
         if (landedTile === TILE_SPIKE) {
           if (isPowered) {
             // Powered player survives spikes and converts to green
@@ -76,21 +92,9 @@ const Player = {
         if (Waves.zombieLevel >= 1) {
           const isEnemyTile = [TILE_RED, TILE_PURPLE, TILE_BLUE, TILE_SMART].includes(landedTile);
           if (isEnemyTile) {
-            if (Waves.zombieLevel >= 2) {
-              // Level 2: enemy → halfclear first (3 total hops needed)
-              Grid.set(this.col, this.row, TILE_HALFCLEAR);
-            } else {
-              // Level 1: enemy → neutral (2 total hops needed)
-              Grid.set(this.col, this.row, TILE_NEUTRAL);
-            }
-            Audio.sfxClaim(true);
-            Encircle.checkAll();
-            return;
-          }
-          // Halfclear tiles → neutral (intermediate step for zombie level 2)
-          if (landedTile === TILE_HALFCLEAR) {
+            // Level 1+: enemy → neutral (2 total hops needed)
             Grid.set(this.col, this.row, TILE_NEUTRAL);
-            Audio.sfxClaim(false);
+            Audio.sfxClaim(true);
             Encircle.checkAll();
             return;
           }

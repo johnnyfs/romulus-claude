@@ -78,6 +78,10 @@ const Enemies = {
       }
     } else if (tileState !== null) {
       Grid.set(col, row, tileState);
+      // If zombieLevel >= 2, freshly claimed tiles are temporarily fatal
+      if (Waves.zombieLevel >= 2) {
+        Grid.setFatal(col, row, Grid.fatalDuration);
+      }
     }
 
     if (Audio.sfxEnemyDeploy) Audio.sfxEnemyDeploy();
@@ -238,6 +242,10 @@ const Enemies = {
               Player.addScore(-1);
             }
             Grid.set(enemy.col, enemy.row, enemy.tileState);
+            // If zombieLevel >= 2, freshly claimed tiles are temporarily fatal
+            if (Waves.zombieLevel >= 2 && enemy.tileState !== null) {
+              Grid.setFatal(enemy.col, enemy.row, Grid.fatalDuration);
+            }
           }
         }
         continue;

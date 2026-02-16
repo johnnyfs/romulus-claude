@@ -86,6 +86,12 @@ const PALETTE = {
   PINK_DARK:   '#c71585',
   CYAN:        '#00e5ff',
   CYAN_DARK:   '#007c8a',
+
+  // Fatal tile colors (bright versions of enemy tiles)
+  RED_FATAL:    '#ff6666',
+  PURPLE_FATAL: '#c77dff',
+  BLUE_FATAL:   '#6ea8fe',
+  SMART_FATAL:  '#f0f0f0',
 };
 
 // Map tile states to colors
@@ -99,7 +105,14 @@ const TILE_COLORS = {
   [TILE_WATER]:   PALETTE.WATER_DARK,
   [TILE_ZOMBIE]:  '#3a3a4a',
   [TILE_SMART]:   PALETTE.SMART_DARK,
-  [TILE_HALFCLEAR]: '#454560',
+};
+
+// Fatal tile colors (bright glow when freshly placed)
+const TILE_FATAL_COLORS = {
+  [TILE_RED]:    PALETTE.RED_FATAL,
+  [TILE_PURPLE]: PALETTE.PURPLE_FATAL,
+  [TILE_BLUE]:   PALETTE.BLUE_FATAL,
+  [TILE_SMART]:  PALETTE.SMART_FATAL,
 };
 
 // Brighter versions for claimed-tile borders/accents
