@@ -411,6 +411,20 @@ const Audio = {
     }
   },
 
+  // Pause all audio (suspend AudioContext)
+  pause() {
+    if (this.ctx && this.ctx.state === 'running') {
+      this.ctx.suspend();
+    }
+  },
+
+  // Resume all audio (resume AudioContext)
+  resume() {
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  },
+
   // Placeholder for hurry up sound (to be implemented by Audio V5)
   sfxHurryUp() {
     // Basic hurry up warning sound

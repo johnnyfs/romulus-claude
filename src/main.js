@@ -62,6 +62,7 @@ const Game = {
         // Pause
         if (Input.wasPressed('Enter') || Input.wasPressed('Escape')) {
           this.state = STATE_PAUSED;
+          Audio.pause();
           break;
         }
 
@@ -195,6 +196,7 @@ const Game = {
       case STATE_PAUSED:
         if (Input.wasPressed('Enter') || Input.wasPressed('Escape')) {
           this.state = STATE_PLAYING;
+          Audio.resume();
         }
         break;
     }

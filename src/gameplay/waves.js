@@ -55,8 +55,8 @@ const Waves = {
   stars: [],
   _starSeed: 0,
 
-  init() {
-    // Populate theme colors from PALETTE
+  _populateThemes() {
+    // Populate theme colors from PALETTE (called once before first use)
     this._themes.swamp_day.sky = PALETTE.SKY_DAY;
     this._themes.swamp_day.skyDark = PALETTE.SKY_DAY_DARK;
     this._themes.swamp_day.water = PALETTE.WATER_DAY;
@@ -80,7 +80,10 @@ const Waves = {
     this._themes.city_night.sky = PALETTE.CITY_NIGHT_SKY;
     this._themes.city_night.skyDark = PALETTE.CITY_NIGHT_SKY_DARK;
     this._themes.city_night.water = PALETTE.CITY_NIGHT_WATER;
+  },
 
+  init() {
+    this._populateThemes();
     this.current = 1;
     this.setupWave();
   },
@@ -121,6 +124,10 @@ const Waves = {
   },
 
   setupWave() {
+    // Ensure theme colors are populated (handles case where start() bypasses init())
+    if (!this._themes.swamp_day.sky) {
+      this._populateThemes();
+    }
     Enemies.init();
     Grid.init();
     Player.reset();
