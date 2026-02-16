@@ -69,7 +69,7 @@ const Decoration = {
   // Draw reeds (behind game tiles, in row 0 area)
   // Architect waves draw cityscape silhouette instead
   drawReeds() {
-    if (Waves.isArchitectWave) {
+    if (Waves.theme && Waves.theme.isCity) {
       this._drawCityscape();
       return;
     }
@@ -104,7 +104,7 @@ const Decoration = {
   // Draw lily pad edge (row 13, below game tiles)
   // Architect waves draw highway fence instead
   drawLilyPads() {
-    if (Waves.isArchitectWave) {
+    if (Waves.theme && Waves.theme.isCity) {
       this._drawHighwayFence();
       return;
     }
@@ -155,10 +155,12 @@ const Decoration = {
 
   // Draw cityscape silhouette (replaces reeds for architect waves)
   _drawCityscape() {
-    // Dark purple dusk background
-    Renderer.fillRect(0, 16, SCREEN_WIDTH, 14, '#2a1a3a');
+    // Sky background for cityscape (uses theme colors)
+    const citySkyBg = Waves.skyDarkColor || '#2a1a3a';
+    Renderer.fillRect(0, 16, SCREEN_WIDTH, 14, citySkyBg);
     // Dark road/canal at bottom
-    Renderer.fillRect(0, 30, SCREEN_WIDTH, 2, '#1a1a2a');
+    const cityWaterBg = Waves.waterColor || '#1a1a2a';
+    Renderer.fillRect(0, 30, SCREEN_WIDTH, 2, cityWaterBg);
 
     for (const b of this.buildings) {
       const baseY = 29; // Same as reed base

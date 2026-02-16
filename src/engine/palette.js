@@ -86,6 +86,32 @@ const PALETTE = {
   PINK_DARK:   '#c71585',
   CYAN:        '#00e5ff',
   CYAN_DARK:   '#007c8a',
+
+  // Swamp Dusk (orange/amber sunset tones)
+  SWAMP_DUSK_SKY:      '#c85a30',
+  SWAMP_DUSK_SKY_DARK: '#8a3a1a',
+  SWAMP_DUSK_WATER:    '#2a3040',
+
+  // City Daytime (blue sky over city)
+  CITY_DAY_SKY:        '#5a9ad9',
+  CITY_DAY_SKY_DARK:   '#4a80b8',
+  CITY_DAY_WATER:      '#1a3050',
+
+  // City Dusk (existing purple — give it proper names)
+  CITY_DUSK_SKY:       '#2a1a3a',
+  CITY_DUSK_SKY_DARK:  '#2a1a3a',
+  CITY_DUSK_WATER:     '#1a1a2a',
+
+  // City Night
+  CITY_NIGHT_SKY:      '#0a0a15',
+  CITY_NIGHT_SKY_DARK: '#080810',
+  CITY_NIGHT_WATER:    '#0a0a1a',
+
+  // Fatal tile colors (bright versions of enemy tiles)
+  RED_FATAL:    '#ff6666',
+  PURPLE_FATAL: '#c77dff',
+  BLUE_FATAL:   '#6ea8fe',
+  SMART_FATAL:  '#f0f0f0',
 };
 
 // Map tile states to colors
@@ -99,7 +125,14 @@ const TILE_COLORS = {
   [TILE_WATER]:   PALETTE.WATER_DARK,
   [TILE_ZOMBIE]:  '#3a3a4a',
   [TILE_SMART]:   PALETTE.SMART_DARK,
-  [TILE_HALFCLEAR]: '#454560',
+};
+
+// Fatal tile colors (bright glow when freshly placed)
+const TILE_FATAL_COLORS = {
+  [TILE_RED]:    PALETTE.RED_FATAL,
+  [TILE_PURPLE]: PALETTE.PURPLE_FATAL,
+  [TILE_BLUE]:   PALETTE.BLUE_FATAL,
+  [TILE_SMART]:  PALETTE.SMART_FATAL,
 };
 
 // Brighter versions for claimed-tile borders/accents

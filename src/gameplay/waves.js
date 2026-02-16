@@ -43,11 +43,47 @@ const Waves = {
   skyDarkColor: null,
   waterColor: null,
 
+  theme: null, // Current theme object, set in setupWave()
+
+  _themes: {
+    swamp_day:   { sky: null, skyDark: null, water: null, isCity: false, isNight: false, name: 'swamp_day' },
+    swamp_dusk:  { sky: null, skyDark: null, water: null, isCity: false, isNight: false, name: 'swamp_dusk' },
+    swamp_night: { sky: null, skyDark: null, water: null, isCity: false, isNight: true, name: 'swamp_night' },
+    city_day:    { sky: null, skyDark: null, water: null, isCity: true, isNight: false, name: 'city_day' },
+    city_dusk:   { sky: null, skyDark: null, water: null, isCity: true, isNight: false, name: 'city_dusk' },
+    city_night:  { sky: null, skyDark: null, water: null, isCity: true, isNight: true, name: 'city_night' },
+  },
+
   // Nighttime stars (generated once per night wave)
   stars: [],
   _starSeed: 0,
 
   init() {
+    // Populate theme colors from PALETTE
+    this._themes.swamp_day.sky = PALETTE.SKY_DAY;
+    this._themes.swamp_day.skyDark = PALETTE.SKY_DAY_DARK;
+    this._themes.swamp_day.water = PALETTE.WATER_DAY;
+
+    this._themes.swamp_dusk.sky = PALETTE.SWAMP_DUSK_SKY;
+    this._themes.swamp_dusk.skyDark = PALETTE.SWAMP_DUSK_SKY_DARK;
+    this._themes.swamp_dusk.water = PALETTE.SWAMP_DUSK_WATER;
+
+    this._themes.swamp_night.sky = PALETTE.SKY_NIGHT;
+    this._themes.swamp_night.skyDark = PALETTE.SKY_NIGHT_DARK;
+    this._themes.swamp_night.water = PALETTE.WATER_BG;
+
+    this._themes.city_day.sky = PALETTE.CITY_DAY_SKY;
+    this._themes.city_day.skyDark = PALETTE.CITY_DAY_SKY_DARK;
+    this._themes.city_day.water = PALETTE.CITY_DAY_WATER;
+
+    this._themes.city_dusk.sky = PALETTE.CITY_DUSK_SKY;
+    this._themes.city_dusk.skyDark = PALETTE.CITY_DUSK_SKY_DARK;
+    this._themes.city_dusk.water = PALETTE.CITY_DUSK_WATER;
+
+    this._themes.city_night.sky = PALETTE.CITY_NIGHT_SKY;
+    this._themes.city_night.skyDark = PALETTE.CITY_NIGHT_SKY_DARK;
+    this._themes.city_night.water = PALETTE.CITY_NIGHT_WATER;
+
     this.current = 1;
     this.setupWave();
   },
@@ -111,45 +147,36 @@ const Waves = {
     else if (wave <= 18) this.targetPercent = 0.82;
     else this.targetPercent = 0.85;
 
-    // Wave progression logic:
-    // Waves 1-4: normal (reeds/lilypads)
-    // Wave 5: zombie wave (night)
-    // Waves 6-9: normal
-    // Wave 10: first architect wave (cityscape, smart frogs only)
-    // Waves 11+: ALWAYS cityscape. Mix of enemies including architects.
-    // Wave 15: zombie wave (night)
-    // Wave 20: architect-only wave
-    const isArchitectWave = (wave >= 10); // Cityscape from wave 10 onward
-    const isZombieWave = (wave === 5 || wave === 15 || (wave > 15 && wave % 10 === 5));
+    // Determine theme based on wave number
+    // Pattern: each biome has 5 normal waves + 1 zombie (night) wave = 10 wave cycle
+    // Waves 1-5: Swamp Day | Wave 6-9: Swamp Dusk | Wave 10: Swamp Night (zombie)
+    // Waves 11-14: City Day (with first speed already applied) | Wave 15-19: City Dusk | Wave 20: City Night (zombie)
+    const cyclePos = ((wave - 1) % 20) + 1; // 1-20 repeating cycle
+    let themeName;
+    if (cyclePos <= 5) themeName = 'swamp_day';
+    else if (cyclePos <= 9) themeName = 'swamp_dusk';
+    else if (cyclePos === 10) themeName = 'swamp_night';
+    else if (cyclePos <= 14) themeName = 'city_day';
+    else if (cyclePos <= 19) themeName = 'city_dusk';
+    else themeName = 'city_night'; // cyclePos === 20
+
+    this.theme = this._themes[themeName];
+    this.isNighttime = this.theme.isNight;
+    this.isArchitectWave = this.theme.isCity;
+    this.skyColor = this.theme.sky;
+    this.skyDarkColor = this.theme.skyDark;
+    this.waterColor = this.theme.water;
+
+    const isZombieWave = this.isNighttime;
     const isArchitectOnlyWave = (wave % 10 === 0 && wave >= 10); // Pure architect waves (10, 20, 30...)
-    this.isArchitectWave = isArchitectWave;
 
     // Zombie evolution level — persists after zombie waves
     if (wave > 15) this.zombieLevel = 2;
     else if (wave > 5) this.zombieLevel = 1;
     else this.zombieLevel = 0;
 
-    // Set sky atmosphere
-    this.isNighttime = isZombieWave;
-    if (isZombieWave) {
-      // Zombie waves: night sky
-      this.skyColor = PALETTE.SKY_NIGHT;
-      this.skyDarkColor = PALETTE.SKY_NIGHT_DARK;
-      this.waterColor = PALETTE.WATER_BG;
-    } else if (isArchitectWave) {
-      // Architect/cityscape waves (10+): dusk purple
-      this.skyColor = '#2a1a3a';
-      this.skyDarkColor = '#2a1a3a';
-      this.waterColor = '#1a1a2a';
-    } else {
-      // Normal daytime waves (1-9 except 5)
-      this.skyColor = PALETTE.SKY_DAY;
-      this.skyDarkColor = PALETTE.SKY_DAY_DARK;
-      this.waterColor = PALETTE.WATER_DAY;
-    }
-
-    // Generate stars for nighttime zombie waves
-    if (isZombieWave) {
+    // Generate stars for nighttime waves
+    if (this.isNighttime) {
       this._generateStars();
     } else {
       this.stars = [];
