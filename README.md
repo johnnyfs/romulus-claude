@@ -1,124 +1,122 @@
 # Maripoga's Errand
 
-A single-screen NES-style arcade game built with vanilla HTML5 Canvas and Web Audio API. No dependencies.
+A single-screen NES-style arcade game. No dependencies, no build step — just HTML, CSS, and vanilla JavaScript.
 
-## Play
+## Quick Start
 
-Open `index.html` in any modern browser. That's it.
+**Clone and play in 30 seconds:**
 
-- **Arrow Keys**: Hop (4 directions)
-- **Enter/Space**: Start game, pause/unpause
-- **Click**: Focus the game area (needed if embedded)
+```bash
+git clone https://github.com/johnnyfs/romulus-claude.git
+cd romulus-claude
+```
 
-## The Game
+Then open `index.html` in your browser:
 
-You are **Maripoga**, a half-frog, half-boy on a mysterious errand. Hop around a grid, claiming tiles green. When your green tiles form a **closed boundary**, everything inside floods green — Qix/Amidar style. Capture enemy frogs caught inside the fill. Reach the target fill percentage to clear each wave.
+| OS | Command |
+|----|---------|
+| **macOS** | `open index.html` |
+| **Linux** | `xdg-open index.html` |
+| **Windows** | `start index.html` |
 
-### Enemy Types
+Or just double-click `index.html` in your file manager. Any modern browser works (Chrome, Firefox, Safari, Edge).
 
-| Enemy | Color | Behavior | Points |
-|-------|-------|----------|--------|
-| **Red Frog** | Red | Hops randomly | 200 |
-| **Purple Frog** | Purple | Chases you aggressively, can double-hop | 500 |
-| **Blue Frog** | Blue | Hops normally but teleports every ~5 seconds | 800 |
-| **Zombie Frog** | Gray | Tiles turn gray (resist hopping), survives encirclement | 100 |
-| **Snail** | Brown | Slow, but every tile it touches becomes a permanent deadly spike | - |
+## Controls
 
-### Wave Progression
+| Key | Action |
+|-----|--------|
+| **Arrow Keys** (or WASD) | Hop in 4 directions |
+| **Enter** or **Space** | Start game / Pause / Unpause |
+| **Escape** | Pause / Unpause |
+| **Tab** | Toggle debug wave select (on title screen) |
 
-- **Waves 1-2**: 1 Red Frog (tutorial)
-- **Waves 3-4**: 2 Red Frogs
-- **Waves 5-6**: Red + Purple (chaser introduced)
-- **Waves 7-8**: 2 Red + Purple
-- **Waves 9-10**: Red + Purple + Blue (teleporter introduced)
-- **Wave 11**: ZOMBIE WAVE! 2 zombies only (Q*bert-style special level)
-- **Waves 12-13**: Full mix with zombie
-- **Wave 14**: ZOMBIE WAVE! 4 zombies
-- **Wave 15+**: Escalating mix, zombie waves every 5th level
-- **Snails** appear after 35 seconds on any wave (hurry up!)
+## How to Play
 
-### Scoring
+You are **Maripoga**, a frog-boy on a mysterious errand. Hop around a 16×12 grid, turning tiles green. When your green tiles form a **closed boundary**, everything inside floods green (Qix/Amidar style). Enemy frogs caught inside the fill are captured. Reach the target fill percentage (shown in the HUD) to clear each wave.
 
-- **+10** per new tile claimed by hopping
-- **Fill bonus**: +2 per tile × combo multiplier when a region floods
-- **Enemy kills**: Base score × position multiplier (1st kill = 1×, 2nd = 2×, etc.)
-- **Wave clear**: +500 bonus
-- **PERFECT**: +5000 for 100% board fill
-- **Extra life** every 10,000 points
+**Tips:**
+- Your green tiles are preserved when you die — only enemy tiles reset
+- Stomp ladybugs by landing on them
+- Bonus flies appear periodically — catch them for speed, invincibility, or extra lives
+- Snails appear after 35 seconds — they leave deadly spike trails, so hurry!
 
-### Animation Pipeline
+## Enemy Types
 
-Fill events trigger a sequential animation pipeline where all movement freezes:
-1. Tiles cascade green one by one
-2. Each trapped enemy spins and dies (one at a time, escalating points)
-3. Total fill bonus displays
-4. PERFECT bonus if applicable
-5. Wave clear check and transition
+| Enemy | Color | Behavior | Kill Score |
+|-------|-------|----------|------------|
+| **Red Frog** | Red | Hops randomly, claims red tiles | 200 |
+| **Purple Frog** | Purple | Chases you, 30% chance to double-hop | 500 |
+| **Blue Frog** | Blue | Teleports every ~5s; dies if teleporting into enclosed area | 800 |
+| **Smart Frog** | White/Gray | Burst-hops in lines to build walls around you | 600 |
+| **Snake** | Orange | Slithers 2 tiles at a time (no arc), doesn't claim tiles | 300 |
+| **Zombie Frog** | Gray | Tiles need 2 hops to reclaim after zombie waves | 100 |
+| **Ladybug** | Red (small) | Harmless! Seeks your green tiles to reset them. Stompable (150 pts) | - |
+| **Snail** | Brown | Slow, but converts every tile to a deadly spike | - |
+
+## Wave Progression
+
+### Swamp — Daytime (Waves 1-5)
+1. 1 Red
+2. 1 Red + Ladybug
+3. 2 Red + Ladybug
+4. 2 Red + Purple + Ladybug
+5. 2 Red + Purple + Ladybug + Snake
+
+### Swamp — Dusk (Waves 6-9)
+6. 2 Red + Purple + Blue
+7. 2 Red + Purple + Blue + Ladybug
+8. 2 Red + 2 Purple + Blue + Ladybug + Snake
+9. 2 Red + 2 Purple + 2 Blue + Ladybug + Snake
+
+### Swamp — Night (Wave 10)
+**Zombie Wave!** 4 Zombies. Introduces the double-tap mechanic (enemy tiles need 2 hops to reclaim).
+
+### City — Daytime (Waves 11-14)
+11. 1 Smart Frog (the Architect)
+12. 1 Smart + 1 Red
+13. 1 Smart + 1 Red + Ladybug
+14. 1 Smart + 2 Red + Ladybug
+
+### City — Dusk (Waves 15-19)
+Procedurally generated with escalating enemy counts.
+
+### City — Night (Wave 20)
+**Zombie Wave!** 5 Zombies. Introduces fatal tiles (freshly-placed enemy tiles glow bright and kill on contact).
+
+### Beyond Wave 20
+The 20-wave cycle repeats with increasing difficulty. Speed scales continuously.
 
 ## Technical Details
 
-### NES Constraints
-
-- **Resolution**: 256×240 pixels, scaled 3× via CSS
-- **Grid**: 16 columns × 12 playable rows (+ HUD row + 2 decoration rows)
+- **Resolution**: 256×240 pixels (NES standard), scaled 3× via CSS
+- **Grid**: 16 columns × 12 playable rows
 - **Sprites**: 16×16 pixel arrays, drawn pixel-by-pixel
-- **Palette**: NES-inspired ~25 colors on screen
 - **Audio**: Chiptune via Web Audio API (square, triangle, noise oscillators)
 - **Font**: Custom 8×8 bitmap arcade font
+- **No dependencies**: Zero npm packages, no build tools, no frameworks
 
-### Architecture
+### File Structure
 
 ```
-index.html          — Entry point, loads all scripts
+index.html              — Open this to play
 src/
   engine/
-    constants.js    — Game constants, tile states, directions
-    palette.js      — NES color palette and tile color mappings
-    input.js        — Keyboard state tracking
-    renderer.js     — Canvas rendering, bitmap font, CRT overlay
-    grid.js         — 16×12 tile grid state management
+    constants.js        — Game constants, tile states, directions
+    palette.js          — NES color palette (6 environment themes)
+    input.js            — Keyboard state tracking
+    renderer.js         — Canvas rendering, bitmap font, CRT overlay
+    grid.js             — 16×12 tile grid + fatal tile timers
   art/
-    sprites.js      — All pixel art sprites (player, enemies, snail)
+    sprites.js          — All pixel art sprites
   audio/
-    audio.js        — Chiptune SFX and music (Web Audio API)
+    audio.js            — Chiptune SFX, music, pause/resume
   gameplay/
-    player.js       — Maripoga: movement, hopping, tile claiming, death
-    enemies.js      — Enemy frog system: spawning, AI, movement
-    encircle.js     — Flood-fill detection + sequential animation pipeline
-    waves.js        — Wave progression, snail spawning, difficulty scaling
-    hud.js          — Score, wave number, fill %, lives display
-    decoration.js   — Swamp scene: reeds (top), lily pads (bottom)
-  main.js           — Game loop, state machine, draw orchestration
+    player.js           — Maripoga: movement, hopping, tile claiming
+    enemies.js          — Enemy system: AI, spawning, ladybug respawn
+    bonuses.js          — Bonus flies and green bug items
+    encircle.js         — Flood-fill detection + animation pipeline
+    waves.js            — Wave progression, themes, difficulty scaling
+    hud.js              — Score, wave, fill %, lives display
+    decoration.js       — Swamp (reeds/lily pads) and City (buildings/fence)
+  main.js               — Game loop and state machine
 ```
-
-### Game States
-
-- `STATE_TITLE` → `STATE_PLAYING` → `STATE_WAVE_CLEAR` → loop
-- `STATE_PLAYING` → `STATE_DYING` → respawn or `STATE_GAME_OVER`
-- `STATE_PAUSED` toggle during play
-
-### Key Constants
-
-- `GRID_OFFSET_Y = 2` — Grid starts 2 tile-rows down (HUD + reed decoration)
-- `GRID_ROWS = 12` — Playable rows
-- `GRID_COLS = 16` — Columns
-- `HOP_DURATION = 200` — ms per hop animation
-
-## Development History
-
-Built collaboratively with Claude agents in a single session:
-- v1-v4: Core engine, sprites, audio, flood-fill mechanic
-- v5: Progressive scoring, snail hazard, sprite art pass
-- v6: Visual overhaul (solid tiles, 8×8 font), gradual fill, zombie frog
-- v7: Sequential animation pipeline, spike kills, wave reorder
-- v8: 12-row grid with reed/lily pad decoration borders
-
-## Future Ideas
-
-- Title screen with pixel art
-- More enemy types
-- Power-ups (speed boost, shield, bomb)
-- Local high score persistence
-- Mobile touch controls
-- Screen shake / juice effects
-- Boss encounters every 10 waves
