@@ -17,6 +17,19 @@ const Grid = {
     }
   },
 
+  // Reset only enemy/hazard tiles to neutral, keeping green tiles intact
+  resetEnemyTiles() {
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        const tile = this.tiles[r][c];
+        if (tile !== TILE_GREEN && tile !== TILE_NEUTRAL && tile !== TILE_WATER) {
+          this.tiles[r][c] = TILE_NEUTRAL;
+        }
+        this.fatalTimers[r][c] = 0;
+      }
+    }
+  },
+
   // Get tile state at grid position
   get(col, row) {
     if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return -1;

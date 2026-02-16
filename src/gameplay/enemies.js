@@ -58,7 +58,7 @@ const Enemies = {
                         type === 'snail' ? 1500 :
                         type === 'snake' ? 600 :
                         type === 'ladybug' ? 1200 :
-                        type === 'smart' ? 400 : 700;
+                        type === 'smart' ? 300 : 700;
     this.list.push({
       type,
       col,
@@ -77,6 +77,9 @@ const Enemies = {
       // Snake: queue second move in same direction
       snakeDir: -1,
       snakeSecondMove: false,
+      // Smart frog: burst hop tracking
+      smartBurstDir: -1,     // Current burst direction
+      smartBurstRemaining: 0, // Hops left in current burst
     });
     // Claim starting tile (snails convert tiles to spike, zombies use gray)
     if (type === 'snail') {
@@ -266,9 +269,11 @@ const Enemies = {
             Grid.set(enemy.col, enemy.row, TILE_NEUTRAL);
           } else if (enemy.tileState !== null) {
             // Blue frog teleport: check if landed in fully green-enclosed area
+            // Only triggers if the frog landed on a NON-green tile inside an enclosure
             if (enemy.justTeleported) {
               enemy.justTeleported = false;
-              if (this._isEnclosedByGreen(enemy.col, enemy.row)) {
+              if (Grid.get(enemy.col, enemy.row) !== TILE_GREEN &&
+                  this._isEnclosedByGreen(enemy.col, enemy.row)) {
                 enemy.alive = false;
                 Player.addScore(this.getKillScore(enemy.type));
                 Audio.sfxCapture();
@@ -392,85 +397,73 @@ const Enemies = {
     }
   },
 
-  // Smart frog AI: actively encircles the player by orbiting clockwise
-  // at radius 2-3, laying a continuous ring of TILE_SMART tiles.
-  // Only 3% randomness — very deliberate movement.
+  // Smart frog AI: aggressive burst movement.
+  // Moves in bursts of 4-6 rapid hops in one direction, then picks a new
+  // direction based on player position. Scary, fast, and deliberate.
+  // The burst pattern naturally creates walls of TILE_SMART tiles.
   _smartDirection(enemy) {
-    // 3% random for slight unpredictability
-    if (Math.random() < 0.03) return Math.floor(Math.random() * 4);
+    // If we have burst hops remaining, continue in the same direction
+    if (enemy.smartBurstRemaining > 0) {
+      enemy.smartBurstRemaining--;
+      // Reduce cooldown for burst hops (very fast consecutive hops)
+      enemy.moveCooldown = 80; // 80ms between burst hops — aggressive
+      const dir = enemy.smartBurstDir;
+      // Check if next tile in burst direction is valid
+      const nextCol = enemy.col + DIR_DX[dir];
+      const nextRow = enemy.row + DIR_DY[dir];
+      if (Grid.inBounds(nextCol, nextRow)) {
+        const tile = Grid.get(nextCol, nextRow);
+        if (tile !== TILE_SPIKE && tile !== TILE_WATER) {
+          return dir; // Continue burst
+        }
+      }
+      // Blocked — end burst early, pick new direction immediately
+      enemy.smartBurstRemaining = 0;
+    }
 
-    const dx = enemy.col - Player.col; // positive = enemy is east of player
-    const dy = enemy.row - Player.row; // positive = enemy is south of player
+    // Pick a new burst direction based on player position
+    const dx = enemy.col - Player.col;
+    const dy = enemy.row - Player.row;
     const dist = Math.abs(dx) + Math.abs(dy);
-    const ORBIT_RADIUS = 2;
 
-    // Phase 1: If far away (>5 tiles), rush toward player
-    if (dist > 5) {
+    // Choose direction strategically:
+    // - If far from player (>6), rush toward them
+    // - If near player (<=6), move perpendicular to create encircling walls
+    let dir;
+    if (dist > 6) {
+      // Rush toward player
       if (Math.abs(dx) > Math.abs(dy)) {
-        return dx > 0 ? DIR_LEFT : DIR_RIGHT;
+        dir = dx > 0 ? DIR_LEFT : DIR_RIGHT;
       } else {
-        return dy > 0 ? DIR_UP : DIR_DOWN;
+        dir = dy > 0 ? DIR_UP : DIR_DOWN;
+      }
+    } else {
+      // Near player: choose direction to build encircling walls
+      // Move perpendicular to the player (clockwise tangent)
+      // This creates L-shaped and box-shaped tile patterns
+      if (dy < 0 && Math.abs(dy) >= Math.abs(dx)) {
+        dir = DIR_RIGHT;  // Above player → sweep right
+      } else if (dx > 0 && Math.abs(dx) >= Math.abs(dy)) {
+        dir = DIR_DOWN;   // Right of player → sweep down
+      } else if (dy > 0 && Math.abs(dy) >= Math.abs(dx)) {
+        dir = DIR_LEFT;   // Below player → sweep left
+      } else {
+        dir = DIR_UP;     // Left of player → sweep up
+      }
+      // Sometimes charge directly at player for pressure (20% chance)
+      if (Math.random() < 0.20) {
+        if (Math.abs(dx) >= Math.abs(dy)) {
+          dir = dx > 0 ? DIR_LEFT : DIR_RIGHT;
+        } else {
+          dir = dy > 0 ? DIR_UP : DIR_DOWN;
+        }
       }
     }
 
-    // Phase 2: Too close (< 2 tiles) — back away
-    if (dist < ORBIT_RADIUS) {
-      if (Math.abs(dx) >= Math.abs(dy)) {
-        return dx >= 0 ? DIR_RIGHT : DIR_LEFT;
-      } else {
-        return dy >= 0 ? DIR_DOWN : DIR_UP;
-      }
-    }
-
-    // Phase 3: At orbit distance (2-4 tiles) — orbit clockwise
-    // Use actual x/y offsets to determine quadrant and move tangentially.
-    // The goal is to trace a rectangle around the player at radius ~2-3.
-
-    // Determine which side of the player we're on and move clockwise:
-    // Top side (dy < 0): move RIGHT (east)
-    // Right side (dx > 0): move DOWN (south)
-    // Bottom side (dy > 0): move LEFT (west)
-    // Left side (dx < 0): move UP (north)
-
-    // Corner and edge cases: prioritize the axis where we're further out
-    // to trace the perimeter smoothly
-    if (dy <= -ORBIT_RADIUS && dx < ORBIT_RADIUS) {
-      // Top edge: move right to trace top side
-      // If also need to adjust radius, move toward radius first
-      if (Math.abs(dy) > ORBIT_RADIUS + 1) return DIR_DOWN; // Too far north, close in
-      return DIR_RIGHT;
-    }
-    if (dx >= ORBIT_RADIUS && dy < ORBIT_RADIUS) {
-      // Right edge: move down to trace right side
-      if (Math.abs(dx) > ORBIT_RADIUS + 1) return DIR_LEFT; // Too far east, close in
-      return DIR_DOWN;
-    }
-    if (dy >= ORBIT_RADIUS && dx > -ORBIT_RADIUS) {
-      // Bottom edge: move left to trace bottom side
-      if (Math.abs(dy) > ORBIT_RADIUS + 1) return DIR_UP; // Too far south, close in
-      return DIR_LEFT;
-    }
-    if (dx <= -ORBIT_RADIUS && dy > -ORBIT_RADIUS) {
-      // Left edge: move up to trace left side
-      if (Math.abs(dx) > ORBIT_RADIUS + 1) return DIR_RIGHT; // Too far west, close in
-      return DIR_UP;
-    }
-
-    // Fallback: move toward orbit radius
-    if (dist > ORBIT_RADIUS + 1) {
-      // Too far — close in
-      if (Math.abs(dx) > Math.abs(dy)) {
-        return dx > 0 ? DIR_LEFT : DIR_RIGHT;
-      } else {
-        return dy > 0 ? DIR_UP : DIR_DOWN;
-      }
-    }
-
-    // Default: continue clockwise based on rough quadrant
-    if (dx >= 0 && dy <= 0) return DIR_DOWN;  // NE quadrant → go south
-    if (dx >= 0 && dy > 0) return DIR_LEFT;   // SE quadrant → go west
-    if (dx < 0 && dy >= 0) return DIR_UP;     // SW quadrant → go north
-    return DIR_RIGHT;                          // NW quadrant → go east
+    // Start new burst: 4-6 hops
+    enemy.smartBurstDir = dir;
+    enemy.smartBurstRemaining = 3 + Math.floor(Math.random() * 3); // 3-5 more after this one
+    return dir;
   },
 
   // Ladybug AI: move toward nearest green tile (random among ties)

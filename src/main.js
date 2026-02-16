@@ -178,10 +178,27 @@ const Game = {
               this.highScore = Player.score;
             }
           } else {
-            // Respawn
+            // Respawn — keep green tiles, reset enemy/hazard tiles only
+            Grid.resetEnemyTiles();
+            Enemies.init();
             Player.reset();
-            Grid.init();
-            Waves.setupWave();
+            if (typeof Bonuses !== 'undefined') Bonuses.init();
+            // Re-spawn enemies for current wave without resetting wave progress
+            Waves.waveElapsed = 0;
+            Waves.hurryUpPlayed = false;
+            Waves.snailsSpawned = 0;
+            const isZombieWave = (Waves.current % 10 === 0);
+            if (isZombieWave) {
+              Waves._spawnZombieWave(Waves.current);
+            } else {
+              Waves._spawnWaveEnemies(Waves.current);
+            }
+            // Apply speed scaling
+            if (Waves.current > 5) {
+              for (const enemy of Enemies.list) {
+                enemy.moveInterval = Math.max(250, enemy.moveInterval - (Waves.current - 5) * 20);
+              }
+            }
             this.state = STATE_PLAYING;
           }
         }

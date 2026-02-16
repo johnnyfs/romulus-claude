@@ -74,7 +74,6 @@ const Encircle = {
     const enemies = [];
     for (const enemy of Enemies.list) {
       if (!enemy.alive) continue;
-      if (enemy.type === 'zombie') continue;   // Zombies survive encirclement
       if (enemy.type === 'snail') continue;     // Snails excluded
 
       // Check both destination and origin positions
