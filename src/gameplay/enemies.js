@@ -58,7 +58,7 @@ const Enemies = {
                         type === 'snail' ? 1500 :
                         type === 'snake' ? 600 :
                         type === 'ladybug' ? 1200 :
-                        type === 'smart' ? 500 : 700;
+                        type === 'smart' ? 400 : 700;
     this.list.push({
       type,
       col,
@@ -392,62 +392,85 @@ const Enemies = {
     }
   },
 
-  // Smart frog AI: orbits the player clockwise at ~3 tile radius to encircle them
+  // Smart frog AI: actively encircles the player by orbiting clockwise
+  // at radius 2-3, laying a continuous ring of TILE_SMART tiles.
+  // Only 3% randomness — very deliberate movement.
   _smartDirection(enemy) {
-    // 10% random for unpredictability
-    if (Math.random() < 0.10) return Math.floor(Math.random() * 4);
+    // 3% random for slight unpredictability
+    if (Math.random() < 0.03) return Math.floor(Math.random() * 4);
 
-    const dx = Player.col - enemy.col;
-    const dy = Player.row - enemy.row;
+    const dx = enemy.col - Player.col; // positive = enemy is east of player
+    const dy = enemy.row - Player.row; // positive = enemy is south of player
     const dist = Math.abs(dx) + Math.abs(dy);
-    const ORBIT_RADIUS = 3; // Stay ~3 tiles from player
+    const ORBIT_RADIUS = 2;
 
-    // Phase 1: If far away (>6 tiles), approach the player
-    if (dist > 6) {
-      // Move toward player but at an angle (try to get to orbit distance)
+    // Phase 1: If far away (>5 tiles), rush toward player
+    if (dist > 5) {
       if (Math.abs(dx) > Math.abs(dy)) {
-        return dx > 0 ? DIR_RIGHT : DIR_LEFT;
-      } else {
-        return dy > 0 ? DIR_DOWN : DIR_UP;
-      }
-    }
-
-    // Phase 2: At orbit distance, circle clockwise around the player
-    // Determine which quadrant we're in relative to the player
-    // and move clockwise along the perimeter
-
-    // But also try to maintain orbit distance
-    const tooClose = dist < ORBIT_RADIUS;
-    const tooFar = dist > ORBIT_RADIUS + 2;
-
-    if (tooClose) {
-      // Back away from player
-      if (Math.abs(dx) > Math.abs(dy)) {
-        return dx > 0 ? DIR_LEFT : DIR_RIGHT; // Move away on major axis
+        return dx > 0 ? DIR_LEFT : DIR_RIGHT;
       } else {
         return dy > 0 ? DIR_UP : DIR_DOWN;
       }
     }
 
-    if (tooFar) {
-      // Close in on player
-      if (Math.abs(dx) > Math.abs(dy)) {
-        return dx > 0 ? DIR_RIGHT : DIR_LEFT;
+    // Phase 2: Too close (< 2 tiles) — back away
+    if (dist < ORBIT_RADIUS) {
+      if (Math.abs(dx) >= Math.abs(dy)) {
+        return dx >= 0 ? DIR_RIGHT : DIR_LEFT;
       } else {
-        return dy > 0 ? DIR_DOWN : DIR_UP;
+        return dy >= 0 ? DIR_DOWN : DIR_UP;
       }
     }
 
-    // At good distance: orbit clockwise
-    // Clockwise: N->E->S->W->N
-    if (dy < -1) return DIR_RIGHT;  // North of player -> go east
-    if (dx > 1) return DIR_DOWN;    // East of player -> go south
-    if (dy > 1) return DIR_LEFT;    // South of player -> go west
-    if (dx < -1) return DIR_UP;     // West of player -> go north
+    // Phase 3: At orbit distance (2-4 tiles) — orbit clockwise
+    // Use actual x/y offsets to determine quadrant and move tangentially.
+    // The goal is to trace a rectangle around the player at radius ~2-3.
 
-    // Edge case: very close to same row/col as player
-    // Continue current orbit direction
-    return Math.floor(Math.random() * 4);
+    // Determine which side of the player we're on and move clockwise:
+    // Top side (dy < 0): move RIGHT (east)
+    // Right side (dx > 0): move DOWN (south)
+    // Bottom side (dy > 0): move LEFT (west)
+    // Left side (dx < 0): move UP (north)
+
+    // Corner and edge cases: prioritize the axis where we're further out
+    // to trace the perimeter smoothly
+    if (dy <= -ORBIT_RADIUS && dx < ORBIT_RADIUS) {
+      // Top edge: move right to trace top side
+      // If also need to adjust radius, move toward radius first
+      if (Math.abs(dy) > ORBIT_RADIUS + 1) return DIR_DOWN; // Too far north, close in
+      return DIR_RIGHT;
+    }
+    if (dx >= ORBIT_RADIUS && dy < ORBIT_RADIUS) {
+      // Right edge: move down to trace right side
+      if (Math.abs(dx) > ORBIT_RADIUS + 1) return DIR_LEFT; // Too far east, close in
+      return DIR_DOWN;
+    }
+    if (dy >= ORBIT_RADIUS && dx > -ORBIT_RADIUS) {
+      // Bottom edge: move left to trace bottom side
+      if (Math.abs(dy) > ORBIT_RADIUS + 1) return DIR_UP; // Too far south, close in
+      return DIR_LEFT;
+    }
+    if (dx <= -ORBIT_RADIUS && dy > -ORBIT_RADIUS) {
+      // Left edge: move up to trace left side
+      if (Math.abs(dx) > ORBIT_RADIUS + 1) return DIR_RIGHT; // Too far west, close in
+      return DIR_UP;
+    }
+
+    // Fallback: move toward orbit radius
+    if (dist > ORBIT_RADIUS + 1) {
+      // Too far — close in
+      if (Math.abs(dx) > Math.abs(dy)) {
+        return dx > 0 ? DIR_LEFT : DIR_RIGHT;
+      } else {
+        return dy > 0 ? DIR_UP : DIR_DOWN;
+      }
+    }
+
+    // Default: continue clockwise based on rough quadrant
+    if (dx >= 0 && dy <= 0) return DIR_DOWN;  // NE quadrant → go south
+    if (dx >= 0 && dy > 0) return DIR_LEFT;   // SE quadrant → go west
+    if (dx < 0 && dy >= 0) return DIR_UP;     // SW quadrant → go north
+    return DIR_RIGHT;                          // NW quadrant → go east
   },
 
   // Ladybug AI: move toward nearest green tile (random among ties)
