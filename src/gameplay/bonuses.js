@@ -210,7 +210,14 @@ const Bonuses = {
   checkPlayerPickup(col, row) {
     for (let i = this.items.length - 1; i >= 0; i--) {
       const item = this.items[i];
+      // Check destination position
       if (item.col === col && item.row === row) {
+        this._applyBonus(item);
+        this.items.splice(i, 1);
+        return true;
+      }
+      // Also check origin position if mid-hop (handles approaching from opposite direction)
+      if (item.isHopping && item.hopFromCol === col && item.hopFromRow === row) {
         this._applyBonus(item);
         this.items.splice(i, 1);
         return true;

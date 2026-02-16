@@ -61,18 +61,27 @@ const Encircle = {
     }
     this.lastFillTime = now;
 
-    // Find enemies in region (excluding zombies, snails, ladybugs)
+    // Find enemies in region (excluding zombies, snails)
+    // Hopping enemies: check both destination AND origin tile
     const enemies = [];
     for (const enemy of Enemies.list) {
       if (!enemy.alive) continue;
       if (enemy.type === 'zombie') continue;   // Zombies survive encirclement
       if (enemy.type === 'snail') continue;     // Snails excluded
-      if (enemy.type === 'ladybug') continue;   // Ladybugs excluded
+      let inRegion = false;
       for (const tile of region) {
         if (enemy.col === tile.col && enemy.row === tile.row) {
-          enemies.push(enemy);
+          inRegion = true;
           break;
         }
+        // Also check origin position if mid-hop
+        if (enemy.isHopping && enemy.hopFromCol === tile.col && enemy.hopFromRow === tile.row) {
+          inRegion = true;
+          break;
+        }
+      }
+      if (inRegion) {
+        enemies.push(enemy);
       }
     }
 

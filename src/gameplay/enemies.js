@@ -23,7 +23,8 @@ const Enemies = {
   ladybugEnabled: false,
   ladybugAlive: false,
   ladybugRespawnTimer: 0,
-  LADYBUG_RESPAWN_INTERVAL: 4500, // halfway between frog deploy 1 (2000ms) and frog deploy 2 (7000ms)
+  LADYBUG_RESPAWN_INTERVAL: 7500, // respawn 7.5s after death (generous window)
+  LADYBUG_INITIAL_DELAY: 7000,    // first ladybug spawns 7s into wave (after 2nd frog would deploy)
 
   init() {
     this.list = [];
@@ -140,7 +141,7 @@ const Enemies = {
   enableLadybug() {
     this.ladybugEnabled = true;
     this.ladybugAlive = false;
-    this.ladybugRespawnTimer = this.LADYBUG_RESPAWN_INTERVAL;
+    this.ladybugRespawnTimer = this.LADYBUG_INITIAL_DELAY; // First spawn uses longer delay
   },
 
   // Deploy a batch of frogs from the frog queue
@@ -531,7 +532,13 @@ const Enemies = {
   checkPlayerStompAt(col, row) {
     for (const enemy of this.list) {
       if (!enemy.alive) continue;
-      if (enemy.type === 'ladybug' && enemy.col === col && enemy.row === row && !enemy.isHopping) {
+      if (enemy.type !== 'ladybug') continue;
+      // Check destination position
+      if (enemy.col === col && enemy.row === row) {
+        return enemy;
+      }
+      // Also check origin position if mid-hop (handles approaching from opposite direction)
+      if (enemy.isHopping && enemy.hopFromCol === col && enemy.hopFromRow === row) {
         return enemy;
       }
     }
