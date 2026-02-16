@@ -7,33 +7,30 @@ const Waves = {
   waveElapsed: 0, // Accumulated elapsed time (pauses don't count)
   hurryUpPlayed: false,
   snailsSpawned: 0,
-  zombieLevel: 0, // 0 = normal, 1 = after wave 5 (enemy tiles need 2 hops), 2 = after wave 15 (3 hops)
+  zombieLevel: 0, // 0 = normal, 1 = after wave 10 (enemy tiles need 2 hops), 2 = after wave 20 (fatal tiles)
 
   // Explicit wave table: each entry lists enemy counts by type.
-  // Every wave is harder than the last (more enemies, new types, or higher fill%).
+  // Swamp Day (1-5), Swamp Dusk (6-9), Zombie (10), City Day (11-14).
   // Enemy types: red, purple, blue, zombie, ladybug, snake, smart
-  // Zombie waves (every 5th) are handled separately.
+  // Zombie waves (every 10th) are handled separately.
   _waveTable: {
     1:  { red: 1 },
-    2:  { red: 1 },
-    3:  { red: 2 },
-    4:  { red: 2, ladybug: 1 },
-    // Wave 5: zombie wave
-    6:  { red: 2, purple: 1 },
-    7:  { red: 2, purple: 1, ladybug: 1 },
-    8:  { red: 3, purple: 1 },
-    9:  { red: 2, purple: 1, blue: 1, smart: 1 },
-    // Wave 10: architect wave (smart frogs only)
-    11: { red: 2, purple: 1, blue: 1, snake: 1, smart: 1 },   // +architect (cityscape)
-    12: { red: 3, purple: 1, blue: 1, snake: 1, smart: 1 },
-    13: { red: 3, purple: 2, blue: 1, ladybug: 1, smart: 1 },
-    14: { red: 3, purple: 2, blue: 1, snake: 1, smart: 2 },
-    // Wave 15: zombie wave
-    16: { red: 3, purple: 2, blue: 2, snake: 1, smart: 2 },
-    17: { red: 4, purple: 2, blue: 2, snake: 1, smart: 1, ladybug: 1 },
-    18: { red: 4, purple: 2, blue: 2, snake: 2, smart: 2 },
-    19: { red: 4, purple: 3, blue: 2, snake: 2, smart: 2, ladybug: 1 },
-    // Wave 20: architect-only wave (3 architects)
+    2:  { red: 1, ladybug: 1 },
+    3:  { red: 2, ladybug: 1 },
+    4:  { red: 2, purple: 1, ladybug: 1 },
+    5:  { red: 2, purple: 1, ladybug: 1, snake: 1 },
+    // Wave 6: Swamp Dusk begins, first speed increase
+    6:  { red: 2, purple: 1, blue: 1 },
+    7:  { red: 2, purple: 1, blue: 1, ladybug: 1 },
+    8:  { red: 2, purple: 2, blue: 1, ladybug: 1, snake: 1 },
+    9:  { red: 2, purple: 2, blue: 2, ladybug: 1, snake: 1 },
+    // Wave 10: Zombie wave (Swamp Night) — 4 zombies, introduces double-tap (zombieLevel 1)
+    // Wave 11: City Daytime begins
+    11: { smart: 1 },
+    12: { smart: 1, red: 1 },
+    13: { smart: 1, red: 1, ladybug: 1 },
+    14: { smart: 1, red: 2, ladybug: 1 },
+    // Wave 15+: City Dusk, generated procedurally
   },
 
   // Sky/atmosphere state (day/night cycle)
@@ -102,31 +99,30 @@ const Waves = {
 
     const wave = this.current;
 
-    // Fill percentage progression - gradual increase
-    if (wave <= 3) this.targetPercent = 0.65;
-    else if (wave <= 6) this.targetPercent = 0.70;
-    else if (wave <= 9) this.targetPercent = 0.75;
-    else if (wave <= 12) this.targetPercent = 0.78;
-    else if (wave <= 15) this.targetPercent = 0.80;
-    else if (wave <= 18) this.targetPercent = 0.82;
-    else this.targetPercent = 0.85;
+    // Fill percentage progression - matches environment phases
+    if (wave <= 5) this.targetPercent = 0.65;       // Swamp Day
+    else if (wave <= 9) this.targetPercent = 0.70;   // Swamp Dusk
+    else if (wave === 10) this.targetPercent = 0.70; // Zombie wave
+    else if (wave <= 14) this.targetPercent = 0.75;  // City Day
+    else if (wave <= 19) this.targetPercent = 0.80;  // City Dusk
+    else if (wave === 20) this.targetPercent = 0.80; // Zombie wave
+    else this.targetPercent = 0.85;                  // Beyond
 
     // Wave progression logic:
-    // Waves 1-4: normal (reeds/lilypads)
-    // Wave 5: zombie wave (night)
-    // Waves 6-9: normal
-    // Wave 10: first architect wave (cityscape, smart frogs only)
-    // Waves 11+: ALWAYS cityscape. Mix of enemies including architects.
-    // Wave 15: zombie wave (night)
-    // Wave 20: architect-only wave
-    const isArchitectWave = (wave >= 10); // Cityscape from wave 10 onward
-    const isZombieWave = (wave === 5 || wave === 15 || (wave > 15 && wave % 10 === 5));
-    const isArchitectOnlyWave = (wave % 10 === 0 && wave >= 10); // Pure architect waves (10, 20, 30...)
-    this.isArchitectWave = isArchitectWave;
+    // Waves 1-5: Swamp Day
+    // Waves 6-9: Swamp Dusk (first speed increase)
+    // Wave 10: Zombie wave (Swamp Night)
+    // Waves 11-14: City Day
+    // Waves 15-19: City Dusk (procedural)
+    // Wave 20: Zombie wave
+    // Pattern: every 10th wave is a zombie wave
+    const isArchitectWave = (wave >= 10 && wave % 10 !== 0); // Cityscape from wave 10 onward (non-zombie)
+    const isZombieWave = (wave % 10 === 0); // Wave 10, 20, 30...
+    this.isArchitectWave = isArchitectWave || (wave >= 10);
 
     // Zombie evolution level — persists after zombie waves
-    if (wave > 15) this.zombieLevel = 2;
-    else if (wave > 5) this.zombieLevel = 1;
+    if (wave > 20) this.zombieLevel = 2;
+    else if (wave > 10) this.zombieLevel = 1;
     else this.zombieLevel = 0;
 
     // Set sky atmosphere
@@ -155,29 +151,27 @@ const Waves = {
       this.stars = [];
     }
 
-    if (isArchitectOnlyWave) {
-      this._spawnArchitectWave(wave);
-    } else if (isZombieWave) {
+    if (isZombieWave) {
       this._spawnZombieWave(wave);
     } else {
       this._spawnWaveEnemies(wave);
     }
 
-    // Speed scaling: starting wave 5, reduce moveInterval by 20ms per wave
+    // Speed scaling: starting wave 6 (Swamp Dusk), reduce moveInterval by 20ms per wave
     // Minimum moveInterval: 250ms
-    if (wave > 4) {
+    if (wave > 5) {
       for (const enemy of Enemies.list) {
-        enemy.moveInterval = Math.max(250, enemy.moveInterval - (wave - 4) * 20);
+        enemy.moveInterval = Math.max(250, enemy.moveInterval - (wave - 5) * 20);
       }
     }
   },
 
-  // Spawn zombie-only wave. W5=2 zombies, W15=4, then +1 per zombie wave after, cap 6.
+  // Spawn zombie-only wave. W10=4 zombies, W20=5, W30+=min(6, 4+floor((wave-10)/10)).
   _spawnZombieWave(wave) {
     let numZombies;
-    if (wave <= 5) numZombies = 2;
-    else if (wave <= 15) numZombies = 4;
-    else numZombies = Math.min(6, 4 + Math.floor((wave - 15) / 10));
+    if (wave <= 10) numZombies = 4;
+    else if (wave <= 20) numZombies = 5;
+    else numZombies = Math.min(6, 4 + Math.floor((wave - 10) / 10));
 
     const positions = [
       [2, 2],
@@ -195,21 +189,6 @@ const Waves = {
         Enemies.spawn('zombie', c + 1, r + 1);
       }
     }
-  },
-
-  // Spawn architect-only wave: smart frogs. Count = wave/10 + 1, so wave 10 = 2, wave 20 = 3, etc.
-  _spawnArchitectWave(wave) {
-    const numArchitects = Math.min(6, 1 + Math.ceil(wave / 10));
-    for (let i = 0; i < numArchitects; i++) {
-      const edge = Math.floor(Math.random() * 4);
-      let col, row;
-      if (edge === 0) { col = Math.floor(Math.random() * GRID_COLS); row = 0; }
-      else if (edge === 1) { col = GRID_COLS - 1; row = Math.floor(Math.random() * GRID_ROWS); }
-      else if (edge === 2) { col = Math.floor(Math.random() * GRID_COLS); row = GRID_ROWS - 1; }
-      else { col = 0; row = Math.floor(Math.random() * GRID_ROWS); }
-      Enemies.queueEnemy('smart', col, row);
-    }
-    Enemies.startDeployment();
   },
 
   // Spawn enemies for a normal (non-zombie) wave.
@@ -239,30 +218,18 @@ const Waves = {
     Enemies.startDeployment();
   },
 
-  // Generate wave config for waves beyond the explicit table.
-  // Each enemy type scales gradually. Every wave adds at least one
-  // unit of difficulty compared to the previous non-zombie wave.
+  // Generate wave config for waves beyond the explicit table (15+).
+  // Base from wave 14: 1 smart, 2 red, 1 ladybug. Scale up gradually.
+  // Waves 15-19 are City Dusk; beyond that continues scaling.
   _generateWaveConfig(wave) {
-    // Find the effective wave index (skip zombie waves for scaling)
-    // Count of non-zombie waves up to this point determines scaling
-    const nonZombieWave = wave - Math.floor(wave / 5);
-
-    // Base counts scale with non-zombie wave number
-    const red = Math.min(6, 3 + Math.floor((nonZombieWave - 15) / 3));
-    const purple = Math.min(4, 2 + Math.floor((nonZombieWave - 15) / 4));
-    const blue = Math.min(3, 2 + Math.floor((nonZombieWave - 17) / 4));
-    const snake = Math.min(3, 1 + Math.floor((nonZombieWave - 15) / 5));
-    const smart = Math.min(3, 1 + Math.floor((nonZombieWave - 16) / 5));
-    const ladybug = Math.min(2, 1 + Math.floor((nonZombieWave - 17) / 6));
-
+    const tier = wave - 14; // 1, 2, 3, 4, 5 for waves 15-19
     const config = {};
-    if (red > 0) config.red = red;
-    if (purple > 0) config.purple = purple;
-    if (blue > 0) config.blue = blue;
-    if (snake > 0) config.snake = snake;
-    if (smart > 0) config.smart = smart;
-    if (ladybug > 0) config.ladybug = ladybug;
-
+    config.smart = Math.min(3, 1 + Math.floor(tier / 2));
+    config.red = Math.min(4, 2 + Math.floor(tier / 2));
+    config.purple = Math.min(3, Math.floor(tier / 2));
+    if (tier >= 2) config.blue = Math.min(2, Math.floor((tier - 1) / 2));
+    if (tier >= 1) config.snake = Math.min(2, Math.floor(tier / 3));
+    config.ladybug = 1;
     return config;
   },
 
