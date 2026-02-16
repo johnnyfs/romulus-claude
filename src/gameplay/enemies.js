@@ -19,6 +19,12 @@ const Enemies = {
   RESPAWN_DELAY: 18000,    // ms before killed enemy can respawn
   respawnQueue: [],         // {type, timer}
 
+  // Ladybug respawn system
+  ladybugEnabled: false,
+  ladybugAlive: false,
+  ladybugRespawnTimer: 0,
+  LADYBUG_RESPAWN_INTERVAL: 4500, // halfway between frog deploy 1 (2000ms) and frog deploy 2 (7000ms)
+
   init() {
     this.list = [];
     this.frogQueue = [];
@@ -30,6 +36,9 @@ const Enemies = {
     this.frogBatchCount = 0;
     this.deploying = false;
     this.respawnQueue = [];
+    this.ladybugEnabled = false;
+    this.ladybugAlive = false;
+    this.ladybugRespawnTimer = 0;
   },
 
   // Spawn an enemy frog of given type at given position (immediately on field)
@@ -78,6 +87,10 @@ const Enemies = {
       }
     } else if (tileState !== null) {
       Grid.set(col, row, tileState);
+      // If zombieLevel >= 2, freshly claimed tiles are temporarily fatal
+      if (Waves.zombieLevel >= 2) {
+        Grid.setFatal(col, row, Grid.fatalDuration);
+      }
     }
 
     if (Audio.sfxEnemyDeploy) Audio.sfxEnemyDeploy();
@@ -123,6 +136,13 @@ const Enemies = {
     this.nonFrogDeployTimer = 2000 + Math.floor(this.FROG_DEPLOY_INTERVAL / 2);
   },
 
+  // Enable ladybug respawn system for this wave
+  enableLadybug() {
+    this.ladybugEnabled = true;
+    this.ladybugAlive = false;
+    this.ladybugRespawnTimer = this.LADYBUG_RESPAWN_INTERVAL;
+  },
+
   // Deploy a batch of frogs from the frog queue
   _deployFrogBatch() {
     if (this.frogQueue.length === 0) return;
@@ -148,6 +168,27 @@ const Enemies = {
   },
 
   update(dt) {
+    // Ladybug respawn system
+    if (this.ladybugEnabled && !this.ladybugAlive) {
+      this.ladybugRespawnTimer -= dt;
+      if (this.ladybugRespawnTimer <= 0) {
+        // Spawn ladybug at player start position (center)
+        const spawnCol = Math.floor(GRID_COLS / 2);
+        const spawnRow = Math.floor(GRID_ROWS / 2);
+        this.spawn('ladybug', spawnCol, spawnRow);
+        this.ladybugAlive = true;
+        this.ladybugRespawnTimer = this.LADYBUG_RESPAWN_INTERVAL;
+      }
+    }
+
+    // Check if ladybug is still alive (could have been killed by invincibility)
+    if (this.ladybugEnabled && this.ladybugAlive) {
+      const hasLiveLadybug = this.list.some(e => e.type === 'ladybug' && e.alive);
+      if (!hasLiveLadybug) {
+        this.ladybugAlive = false;
+      }
+    }
+
     // Smart deployment: tick frog and non-frog timers separately
     if (this.deploying) {
       const hasWork = this.frogQueue.length > 0 || this.nonFrogQueue.length > 0;
@@ -238,6 +279,10 @@ const Enemies = {
               Player.addScore(-1);
             }
             Grid.set(enemy.col, enemy.row, enemy.tileState);
+            // If zombieLevel >= 2, freshly claimed tiles are temporarily fatal
+            if (Waves.zombieLevel >= 2 && enemy.tileState !== null) {
+              Grid.setFatal(enemy.col, enemy.row, Grid.fatalDuration);
+            }
           }
         }
         continue;
@@ -284,8 +329,10 @@ const Enemies = {
       } else if (enemy.type === 'snake' && enemy.snakeSecondMove) {
         // Snake second move: same direction as first
         dir = enemy.snakeDir;
+      } else if (enemy.type === 'ladybug') {
+        dir = this._ladybugDirection(enemy);
       } else {
-        // Random movement (red, snail, ladybug, snake first move, zombie)
+        // Random movement (red, snail, snake first move, zombie)
         dir = Math.floor(Math.random() * 4);
       }
 
@@ -402,6 +449,45 @@ const Enemies = {
     return Math.floor(Math.random() * 4);
   },
 
+  // Ladybug AI: move toward nearest green tile (random among ties)
+  _ladybugDirection(enemy) {
+    // Find nearest green tile
+    let bestDist = Infinity;
+    let candidates = [];
+
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        if (Grid.get(c, r) === TILE_GREEN) {
+          const dist = Math.abs(c - enemy.col) + Math.abs(r - enemy.row);
+          if (dist < bestDist) {
+            bestDist = dist;
+            candidates = [{col: c, row: r}];
+          } else if (dist === bestDist) {
+            candidates.push({col: c, row: r});
+          }
+        }
+      }
+    }
+
+    if (candidates.length === 0) {
+      return Math.floor(Math.random() * 4); // No green tiles, move randomly
+    }
+
+    // Pick random among tied candidates
+    const target = candidates[Math.floor(Math.random() * candidates.length)];
+    const dx = target.col - enemy.col;
+    const dy = target.row - enemy.row;
+
+    // Move toward target
+    if (Math.abs(dx) > Math.abs(dy)) {
+      return dx > 0 ? DIR_RIGHT : DIR_LEFT;
+    } else if (Math.abs(dy) > 0) {
+      return dy > 0 ? DIR_DOWN : DIR_UP;
+    } else {
+      return Math.floor(Math.random() * 4); // On the target, move randomly
+    }
+  },
+
   draw() {
     for (const enemy of this.list) {
       if (!enemy.alive) continue;
@@ -455,6 +541,9 @@ const Enemies = {
   // Kill a stompable enemy (ladybug)
   stompEnemy(enemy) {
     enemy.alive = false;
+    if (enemy.type === 'ladybug') {
+      this.ladybugAlive = false;
+    }
     Player.addScore(150); // Ladybug stomp: 150 points
     if (Audio.sfxLadybugSquish) Audio.sfxLadybugSquish();
   },
