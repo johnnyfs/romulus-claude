@@ -1,0 +1,144 @@
+; ==============================================================================
+; MITOSIS PANIC - Main Theme Music
+; ==============================================================================
+; "Cellular Meditation" - Ambient Laboratory Theme
+;
+; Style: Minimal ambient, Tetris Type B inspired
+; Tempo: 100 BPM (slow, meditative)
+; Key: C Minor (somber, scientific feel)
+; Structure: 16-bar loop with subtle variation
+;
+; Design Philosophy:
+; - NOT upbeat arcade music
+; - Calm, contemplative atmosphere
+; - Scientific/laboratory ambiance
+; - Sparse instrumentation
+; - Gentle, non-intrusive
+;
+; Co-Authored-By: Audio Engineer the Claudette <noreply@anthropic.com>
+; ==============================================================================
+
+; NOTE: This is a simplified text representation
+; For full FamiTone2 integration, this should be composed in FamiTracker
+; and exported using the FamiTone2 converter tool
+
+; ==============================================================================
+; MAIN THEME - "CELLULAR MEDITATION"
+; ==============================================================================
+; Tempo: 100 BPM (slow, meditative)
+; Pattern Length: 16 bars x 4 beats = 64 beats total
+
+; PULSE 1 - Main Melody (sparse, contemplative)
+; Bar 1-4: Opening phrase (long notes, minimal movement)
+music_main_pulse1:
+    ; C4 (whole note)
+    .byte $8C, $FD, $01, $20    ; Volume 12, C4, duration 32 frames
+    ; Eb4 (half note)
+    .byte $8C, $3F, $01, $10    ; Eb4, duration 16 frames
+    ; Rest (half note)
+    .byte $00, $00, $00, $10    ; Silence
+    ; G3 (whole note)
+    .byte $8B, $89, $01, $20    ; Volume 11, G3, duration 32 frames
+
+; Bar 5-8: Development (slightly more active)
+    ; Bb3 (dotted half)
+    .byte $8C, $FE, $01, $18    ; Bb3, 24 frames
+    ; C4 (quarter)
+    .byte $8C, $FD, $01, $08    ; C4, 8 frames
+    ; D4 (half note)
+    .byte $8C, $87, $01, $10    ; D4, 16 frames
+    ; Rest (half note)
+    .byte $00, $00, $00, $10    ; Silence
+
+; Bar 9-12: Return to opening theme (with variation)
+    ; C4 (whole note, softer)
+    .byte $88, $FD, $01, $20    ; Volume 8, C4, duration 32 frames
+    ; Eb4 (half note)
+    .byte $88, $3F, $01, $10    ; Eb4, duration 16 frames
+    ; F4 (quarter note - slight variation)
+    .byte $89, $C9, $00, $08    ; Volume 9, F4, 8 frames
+    ; Rest (quarter)
+    .byte $00, $00, $00, $08    ; Silence
+
+; Bar 13-16: Closing phrase (prepare for loop)
+    ; G3 (half note)
+    .byte $8A, $89, $01, $10    ; Volume 10, G3, 16 frames
+    ; Bb3 (half note)
+    .byte $8A, $FE, $01, $10    ; Bb3, 16 frames
+    ; C4 (whole note - return to tonic)
+    .byte $8C, $FD, $01, $20    ; C4, 32 frames (leads back to loop)
+
+    .byte $FF    ; Loop back to start
+
+; TRIANGLE - Bass Line (minimal, foundational)
+; Simple whole notes following chord roots
+music_main_triangle:
+    ; C2 (4 bars)
+    .byte $FD, $07, $80    ; C2, very long
+    ; Eb2 (2 bars)
+    .byte $3F, $06, $40    ; Eb2, long
+    ; G2 (2 bars)
+    .byte $89, $05, $40    ; G2, long
+    ; C2 (4 bars)
+    .byte $FD, $07, $80    ; C2, very long
+    ; Bb1 (2 bars)
+    .byte $FE, $06, $40    ; Bb1, long
+    ; G2 (2 bars)
+    .byte $89, $05, $40    ; G2, long
+
+    .byte $FF    ; Loop
+
+; PULSE 2 - Harmony (very sparse, occasional counterpoint)
+; Mostly silent, adds texture at key moments
+music_main_pulse2:
+    ; 4 bars silence
+    .byte $00, $00, $00, $80
+    ; Eb4 (whole note - harmonize with melody)
+    .byte $84, $3F, $01, $20    ; Volume 4 (very quiet), Eb4
+    ; 4 bars silence
+    .byte $00, $00, $00, $80
+    ; G3 (whole note)
+    .byte $84, $89, $01, $20    ; Volume 4, G3
+    ; 6 bars silence (let melody breathe)
+    .byte $00, $00, $00, $C0
+
+    .byte $FF    ; Loop
+
+; NOISE - Minimal Percussion (very subtle, organic texture)
+; Soft noise hits, like distant laboratory equipment
+music_main_noise:
+    ; Very sparse, quiet noise hits every 4 beats
+    ; Pattern: soft hit, rest, rest, rest (repeat)
+    .byte $82, $0F, $20    ; Volume 2, noise period, 32 frames
+    .byte $00, $00, $60    ; Rest for 96 frames
+    .byte $82, $0F, $20    ; Another soft hit
+    .byte $00, $00, $60    ; Rest
+    .byte $82, $0F, $20    ; Hit
+    .byte $00, $00, $60    ; Rest
+    .byte $82, $0F, $20    ; Hit
+    .byte $00, $00, $60    ; Rest
+
+    .byte $FF    ; Loop
+
+; ==============================================================================
+; Music Header (FamiTone2 format)
+; ==============================================================================
+.export music_main
+music_main:
+    .word music_main_pulse1
+    .word music_main_pulse2
+    .word music_main_triangle
+    .word music_main_noise
+
+; ==============================================================================
+; NOTES ON COMPOSITION
+; ==============================================================================
+; This theme is designed to be:
+; 1. NON-INTRUSIVE - Players can focus on gameplay without distraction
+; 2. AMBIENT - Creates atmosphere without demanding attention
+; 3. MEDITATIVE - Slow tempo (100 BPM) promotes calm, strategic thinking
+; 4. SCIENTIFIC - Minor key and sparse arrangement evoke laboratory setting
+; 5. LOOPABLE - 16-bar structure loops seamlessly
+;
+; Key inspirations: Tetris Type B, Dr. Mario virus theme, ambient puzzle games
+; ==============================================================================

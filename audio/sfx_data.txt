@@ -1,0 +1,83 @@
+; ==============================================================================
+; MITOSIS PANIC - Sound Effects Data
+; ==============================================================================
+; Sound effects in text2data format for FamiTone2
+; These can be converted using text2data tool or manually assembled
+;
+; Co-Authored-By: Audio Engineer the Claudette <noreply@anthropic.com>
+; ==============================================================================
+
+; SFX 0: NUTRIENT COLLECTION BLOOP
+; Brief descending chirp on Triangle channel (organic "bloop")
+; Duration: ~0.15 seconds
+sfx_nutrient:
+    ; Triangle channel sweep: C5 -> C4
+    .byte $00    ; Channel 0 (Pulse 1)
+    .byte $8F    ; Volume 15, duty 50%
+    .byte $FE    ; Period low (C5 ~523Hz)
+    .byte $00    ; Period high
+    .byte $03    ; Duration: 3 frames
+    .byte $FD    ; Period low (C4 ~261Hz) - sweep down
+    .byte $01    ; Period high
+    .byte $03    ; Duration: 3 frames
+    .byte $FF    ; End of SFX
+
+; SFX 1: MITOSIS JINGLE
+; Triumphant ascending arpeggio on Pulse channel
+; Duration: ~0.3 seconds (celebratory but not too long)
+sfx_mitosis:
+    ; Pulse 1 arpeggio: C4 -> E4 -> G4 -> C5
+    .byte $00    ; Channel 0 (Pulse 1)
+    .byte $8F    ; Volume 15, duty 50%
+    .byte $FD    ; Period low (C4)
+    .byte $01    ; Period high
+    .byte $04    ; Duration: 4 frames
+    .byte $C9    ; Period low (E4)
+    .byte $01    ; Period high
+    .byte $04    ; Duration: 4 frames
+    .byte $89    ; Period low (G4)
+    .byte $01    ; Period high
+    .byte $04    ; Duration: 4 frames
+    .byte $FE    ; Period low (C5)
+    .byte $00    ; Period high
+    .byte $06    ; Duration: 6 frames (sustain)
+    .byte $FF    ; End of SFX
+
+; SFX 2: DEATH CRASH
+; Noise burst with descending pitch
+; Duration: ~0.4 seconds
+sfx_death:
+    ; Noise channel crash
+    .byte $03    ; Channel 3 (Noise)
+    .byte $8F    ; Volume 15
+    .byte $00    ; Noise period (low pitch)
+    .byte $08    ; Duration: 8 frames
+    .byte $8A    ; Volume 10 (decay)
+    .byte $02    ; Noise period (change timbre)
+    .byte $08    ; Duration: 8 frames
+    .byte $85    ; Volume 5 (further decay)
+    .byte $04    ; Noise period
+    .byte $08    ; Duration: 8 frames
+    .byte $FF    ; End of SFX
+
+; SFX 3: PROXIMITY WARNING BEEP
+; High-pitched short beep on Pulse 2
+; Duration: ~0.1 seconds (urgent but brief)
+sfx_proximity:
+    ; Pulse 2 high beep: E6
+    .byte $01    ; Channel 1 (Pulse 2)
+    .byte $8F    ; Volume 15, duty 50%
+    .byte $08    ; Period low (E6 ~1318Hz)
+    .byte $00    ; Period high
+    .byte $04    ; Duration: 4 frames
+    .byte $FF    ; End of SFX
+
+; ==============================================================================
+; SFX Table for FamiTone2
+; ==============================================================================
+.export sfx_table
+sfx_table:
+    .word sfx_nutrient
+    .word sfx_mitosis
+    .word sfx_death
+    .word sfx_proximity
